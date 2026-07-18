@@ -20,6 +20,25 @@ render it with impact: item cards + the climbing **idle-capital total** →
                                                                               └──► (5) upsell renders from the same result
 ```
 
+## Reference UI — the result screen (target)
+
+![Result list mockup — detected gadgets with per-item rent/resale, an earnings hero, and a
+bottom "List N gadgets" action bar](../../mockup/result-list-mockup.png)
+
+An **example** of the result screen you render (illustrative, not final). You own everything
+here **except the bottom action bar**:
+- The **"N gadgets found" list** + per-item cards (resale, rent/day, sources, confidence chip,
+  photo, and a **selection checkbox**) — `<rentgen-results>`.
+- The **earnings hero** — `<rentgen-results>`. **Framing decision (confirmed):** the hero stays
+  **idle-capital-first** (*"€4,200 idle. Earning €0."*). The mockup's rent-first *"€197/wk"* is
+  only an illustrative render — lead with idle capital; rent/day stays supporting detail, and
+  the frozen total contract does **not** change. But the hero UI is **extensible** to *also*
+  surface a **passive monthly income** figure — additive, optional, and it doesn't touch the
+  total contract (see "Passive-income display" below).
+- The **bottom action bar** (`3 selected · …` + the **"List N"** button) is **Stream 5's
+  `<rentgen-upsell>`**, mounted in your slot. You render the list + selection state; it renders
+  the export actions.
+
 ## You own (create these)
 
 - `client/RentgenClient.ts` — `scan(imageBase64)`: image-hash cache → `DetectionAdapter` →
@@ -27,12 +46,17 @@ render it with impact: item cards + the climbing **idle-capital total** →
   `scan:complete`** → return `ScanResult`. Also `consume(sessionId)`.
 - `config.ts` — `configureRentgen(config)` / `getClient()`. **Imports the other streams'
   factories** (`createDetectionAdapter`, `createEnrichmentAdapter`, `createAssetAdapter`)
-  and picks real-vs-stub by which keys are present.
+  and picks real-vs-stub by which keys are present. **Forwards an opaque `asset` config blob**
+  (Stream 5's `{ auth, providers, uploader, actions, callbacks }`) straight into
+  `createAssetAdapter` — you don't read or reshape it, just pass it through.
 - `storage/sessionStore.ts` — localStorage wrapper + image-hash cache (instant rehearsal).
-- `events.ts` — the event names/payloads (`scan:start|complete|error`). **Publish this in
-  hour 1** so everyone else is unblocked.
+- `events.ts` — the event names/payloads (`scan:start|complete|error`, plus
+  `selection:change` — see selection contract). **Publish this in hour 1** so everyone else is
+  unblocked.
 - `results/rentgen-results.ts` — the `<rentgen-results>` element: cards (resale, rent/day,
-  sources, confidence chip) + the animated total. `results/total.ts`, `results/format.ts`.
+  sources, confidence chip, photo, **selection checkbox**) + the animated total + the
+  extensible hero. Emits **`selection:change`** as items are checked/unchecked.
+  `results/total.ts`, `results/format.ts`, `results/earnings.ts` (passive-income helper).
 - `index.ts` — the root barrel (re-exports each stream's public surface).
 - `apps/app/src/App.tsx` — calls `configureRentgen({ VITE_* keys })`, lays out the headline
   + mounts `<rentgen-scanner>` / `<rentgen-results>` (+ a slot for `<rentgen-upsell>`).
@@ -50,8 +74,18 @@ build against it in parallel and you swap their real modules in as they land —
 - `RentgenClient` **awaits enrichments with `Promise.all`** (parallel, one call per object).
 - The **event bus is the only widget↔widget channel.** Results subscribes to
   `scan:complete`; it never imports the scanner or the client internals.
-- Provide a **named slot / mount point** in `<rentgen-results>` for Stream 5's upsell, and
-  agree its exact contract with Stream 5 (don't hard-code upsell logic in results).
+- Provide a **named slot / mount point** at the **bottom of `<rentgen-results>`** for Stream
+  5's `<rentgen-upsell>` action bar (per the Reference UI). You render the list + selection; it
+  renders the actions. Don't hard-code upsell logic in results.
+- **Selection contract.** `<rentgen-results>` owns the per-item checkboxes and the current
+  selection. On every change it emits **`selection:change { sessionId, selectedItemIds }`** on
+  the bus; Stream 5's export reads the latest set and lists only the selected subset. Default:
+  all items checked. Payload **confirmed with Stream 5 and frozen** in the README seam registry.
+- **Passive-income display (demo heuristic).** The extensible hero can show
+  *"~€X/month passive"* computed **locally** as a fixed share of each item's resale midpoint
+  (**5–10%/month**, one constant, single currency). Pure helper in `results/earnings.ts`; no
+  contract change. "AI-estimated passive income" is an optional upgrade — it would need
+  **Stream 3** to emit a per-item field (frozen-type change → coordinate). Ship the heuristic.
 - Keys stay in `apps/app` env and are passed into `configureRentgen`; the SDK never reads
   `import.meta.env`.
 
@@ -64,20 +98,27 @@ Two compile-time duties land here (details in specs 1 & 2, "Design decisions"):
    a Phase-2 crop) still slips through. In `RentgenClient`, merge items whose
    `name`+`category` match (case-insensitive) before totaling — keep the higher-confidence
    one. Stream 2's naming rules are designed to make this string-stable.
-2. **Persist the scan image as the item image.** `EnrichedItem` has no image field, but the
-   cards need a photo: the `imageBase64` passed into `scan()` *is* the item image — exactly
-   **one image per item**, ever (Phase 2: a single-object crop; a white-background cutout
-   instead if Stream 1's optional SlimSAM step is active — same field, same shape, you can't
-   tell and don't need to). Store it on the session
-   keyed to the scan's items so `<rentgen-results>` and Stream 5 can render it. If that
-   means a field on `Session`/`ScanResult`, that's your frozen-file stewardship call —
-   update the README registry when you do it.
+2. **Persist the scan image as the item image — on `EnrichedItem.image`.** The `imageBase64`
+   passed into `scan()` *is* the item image — exactly **one image per item**, ever (Phase 2: a
+   single-object crop; a white-background cutout instead if Stream 1's optional SlimSAM step is
+   active — same field, same shape, you can't tell and don't need to). **Contract (confirmed
+   with Stream 5):** add an **optional** `readonly image?: string` (data URL) to `EnrichedItem`
+   so both `<rentgen-results>` and Stream 5's `photoProvider` read the same `item.image`. This
+   is your frozen-type stewardship call — make the edit and update the README registry. Stream
+   5 designs against `image?` optional and degrades gracefully if it's ever absent.
 
 ## Steward, don't hoard (the frozen files)
 
 You *own* `types.ts`, `adapters/types.ts`, `events.ts`, `config.ts`, `index.ts` — but they
 are **shared contracts**. When another stream needs a change here, treat it as a team
 decision, make the edit deliberately, and keep the README registry in sync.
+
+**Registry updates confirmed this round (make them + sync the README):**
+- `EnrichedItem.image?: string` — optional item photo (handoff #2).
+- `selection:change { sessionId, selectedItemIds }` — new bus event (selection contract).
+- `rentgen-report-card` — new custom-element tag registered by Stream 5; add it to the frozen
+  tag list.
+- `configureRentgen` accepts + forwards an opaque `asset` config blob to `createAssetAdapter`.
 
 ## 🚧 Stop & coordinate if…
 
@@ -92,4 +133,8 @@ decision, make the edit deliberately, and keep the README registry in sync.
 ## Definition of done
 
 - One `scan()` → cards + a correct, animated idle-capital total, end-to-end (stub → real).
+- Per-item **selection** works; `selection:change` fires; Stream 5's action bar mounts in the
+  results slot and exports only the selected subset.
+- The hero optionally shows a **passive monthly income** line from the local 5–10% heuristic,
+  without changing the total contract.
 - `npm run dev` boots the assembled app; a rehearsal re-scan is instant (cache hit).

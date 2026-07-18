@@ -42,6 +42,8 @@ hour 1.
 
 **Domain types** — `packages/sdk/src/types.ts` (exists):
 `PriceRange`, `Source`, `DetectedObject`, `EnrichedItem`, `ScanResult`, `Session`, `Asset`.
+- `EnrichedItem.image?: string` — optional item photo (data URL): the scan image persisted per
+  item. Read by `<rentgen-results>` and Stream 5's `photoProvider`. (Added by S4 — handoff #2.)
 
 **Adapter interfaces** — `packages/sdk/src/adapters/types.ts` (exists):
 `DetectionAdapter.detect(imageBase64) → DetectedObject[]`,
@@ -54,17 +56,21 @@ them without touching your code):
 - Stream 3 → `createEnrichmentAdapter(config): EnrichmentAdapter`
 - Stream 5 → `createAssetAdapter(config?): AssetAdapter`
 
-**Custom-element tags:** `rentgen-scanner` (S1), `rentgen-results` (S4), `rentgen-upsell` (S5).
-A widget **self-registers** on import and **never imports another widget**.
+**Custom-element tags:** `rentgen-scanner` (S1), `rentgen-results` (S4), `rentgen-upsell` (S5),
+`rentgen-report-card` (S5). A widget **self-registers** on import and **never imports another widget**.
 
 **Event bus** — `packages/sdk/src/events.ts` (published by S4, then frozen). The only
 channel between widgets:
 - `scan:start` `{}` — a scan began (show a spinner).
 - `scan:complete` `ScanResult` — a scan finished; results + upsell render from this.
 - `scan:error` `{ message: string }` — surface it.
+- `selection:change` `{ sessionId: string, selectedItemIds: string[] }` — result-list selection
+  changed; Stream 5 exports only the selected subset. (S4 owns; payload confirmed with S5.)
 
 **Client API:** `getClient().scan(imageBase64) → Promise<ScanResult>`,
-`getClient().consume(sessionId) → Session | null`, `configureRentgen(config)`.
+`getClient().consume(sessionId) → Session | null`, `configureRentgen(config)`. `configureRentgen`
+also accepts an opaque `asset` config blob (Stream 5's `{ auth, providers, uploader, actions,
+callbacks }`) and forwards it untouched to `createAssetAdapter`.
 
 **Theming (CSS custom properties):** `--rentgen-accent`, `--rentgen-card-bg`,
 `--rentgen-radius`, `--rentgen-font`. Need a new one? Add it here first.
