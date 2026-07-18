@@ -36,6 +36,12 @@ export interface EnrichedItem extends DetectedObject {
   readonly resale: PriceRange;
   readonly rentPerDay: PriceRange;
   readonly sources: readonly Source[];
+  /**
+   * Optional item photo (data URL) — the scan image persisted per item, attached by
+   * RentgenClient at compile time. Read by <rentgen-results> and Stream 5's photoProvider.
+   * (Sanctioned registry edit — see workstreams README, handoff #2.)
+   */
+  readonly image?: string;
 }
 
 /** The result of a single scan — what <rentgen-results> renders. */

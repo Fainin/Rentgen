@@ -7,7 +7,10 @@
 
 SDK-first, fully client-side, **zero backend**. The value chain ships as a reusable package (`@rentgen/sdk`); a thin React app (`apps/app`) just launches it.
 
-> **STATUS: bare scaffold.** Monorepo, tooling, docs, and the locked SDK **contracts** (`packages/sdk/src/types.ts`, `adapters/types.ts`) are in place. The implementation — adapters, client, widgets, app wiring — is what the team builds. See `CLAUDE.md`.
+> **STATUS: working end-to-end.** Tap-to-capture *and* live-pan scanning → OpenAI vision
+> classification → Tavily-grounded pricing with real source links → idle-capital total →
+> per-item selection → generic listing-export bundle. Runs fully offline on stub adapters
+> (`?stub=1`) or live with keys. See `docs/build-notes.md` for lessons learned.
 
 ## Quickstart
 
@@ -17,7 +20,10 @@ npm run dev          # boots the app shell on http://localhost:5173
 npm run typecheck    # type-checks both workspaces
 ```
 
-Right now the app is just a headline shell — start filling in `packages/sdk` against the contracts, then mount the widgets in `apps/app`.
+The app boots with camera capture + results + export bar wired. Append `?stub=1` to the
+URL to force the offline stub adapters (no keys, no network — the demo-safe path).
+Portability proof: `examples/plain-html/` mounts the same widgets from the built SDK with
+zero framework; the Angular recipe is in `packages/sdk/README.md`.
 
 ### API keys (when you wire up the real adapters)
 
