@@ -224,9 +224,14 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function callOpenAI(imageBase64: string, config: OpenAIVisionConfig): Promise<string> {
-  // Fastest vision model in the family (measured ~0.9-1.3s vs 1.4s mini, 2.2-3.9s gpt-4.1);
-  // demo hints offset nano's weaker brand OCR. Override via config for cold rooms.
+  // Fastest vision model measured for this task: gpt-4.1-nano 0.75-1.3s vs gpt-4.1-mini
+  // ~1.4s, gpt-4.1 2.2-3.9s, gpt-5-nano (minimal effort) 1.3-1.7s, gpt-5-mini ~2.2s.
+  // Demo hints offset nano's weaker brand OCR. Override via config for cold rooms.
   const model = config.model ?? 'gpt-4.1-nano';
+  // GPT-5-family models are reasoning models with a different parameter surface: they
+  // reject `temperature`/`max_tokens` and want `max_completion_tokens` (+ minimal
+  // reasoning effort for latency). Keep the config dial working across both families.
+  const isReasoningModel = model.startsWith('gpt-5') || model.startsWith('o');
   const body = {
     model,
     messages: [
@@ -242,8 +247,9 @@ async function callOpenAI(imageBase64: string, config: OpenAIVisionConfig): Prom
       },
     ],
     response_format: { type: 'json_schema', json_schema: JSON_SCHEMA },
-    temperature: TEMPERATURE,
-    max_tokens: MAX_TOKENS,
+    ...(isReasoningModel
+      ? { max_completion_tokens: MAX_TOKENS * 2, reasoning_effort: 'minimal' }
+      : { temperature: TEMPERATURE, max_tokens: MAX_TOKENS }),
   };
 
   let lastError: Error | undefined;
