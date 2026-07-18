@@ -28,6 +28,14 @@ The model emits NaN/Infinity/absurd numbers eventually. Enrichment validates aft
 ## AbortSignal.timeout on every external call (carried from prototype)
 OpenAI vision 45s, Tavily 15s, reconcile 30s. A hung fetch must never hang the demo.
 
+## Vercel deploy: always via `npm run deploy` (link before deploy)
+The app deploys as a prebuilt static site (keys are baked in at build time — no Vercel
+env config). `vite build` wipes `dist/`, including the `.vercel/` project link, so a bare
+`vercel deploy --cwd apps/app/dist` after a rebuild silently creates a NEW project named
+"dist". `npm run deploy` re-links to the `rentgen` project every time. Public URL:
+https://rentgen-five.vercel.app (the team-scoped aliases sit behind Vercel SSO). A stray
+empty "dist" project may exist in the dashboard — safe to delete by hand.
+
 ## Secret scan before any public push
 Real keys live only in `apps/app/.env` (gitignored — verify before push). Rotate both
 keys after the event; they are demo-scoped and embedded in the browser bundle by design.
