@@ -71,6 +71,23 @@ Headless-panel smoke tests drive the scanner via
 `document.querySelector('rentgen-scanner').runScan(dataUrl)` (TS-private, runtime-public)
 and fetch test images from `apps/app/public/` — data URLs are too big for eval args.
 
+## Client accumulates the inventory across scans (v2 flow)
+`RentgenClient` keeps a running deduped inventory; every `scan()` merges into it and
+emits the FULL accumulated `ScanResult` under one session id — so the live-pan total
+climbs, review shows everything, and the export bundle covers the whole walkthrough.
+`resetSession()` starts fresh. Trade-off: a session's persisted `imageHash` is the
+latest image only, so re-scanning an *earlier* photo after other scans re-runs the
+APIs (dedup still prevents duplicates).
+
+## Review widgets must stay mounted
+`<rentgen-results>`/`<rentgen-upsell>` render from live bus events and miss anything
+emitted before they connect. The app keeps the review tree always mounted
+(`display:none` outside the review phase) instead of mounting it on phase switch.
+
+## wmux browser panel throttles requestAnimationFrame
+Count-up animations look "stuck" when sampled via eval right after events — they
+complete once frames are produced. Test-environment quirk only; real browsers are fine.
+
 ## sideEffects in packages/sdk/package.json
 Was `false`; widget self-registration would be tree-shaken out of production app builds.
 Now an allowlist (`rentgen-*.ts`, `index.ts`, `dist/**`). If a widget ever "disappears"

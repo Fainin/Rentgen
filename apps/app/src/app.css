@@ -1,0 +1,311 @@
+/* Rentgen launcher — onboarding + immersive scanning chrome.
+   Design language: near-black, glass surfaces, mint accent (matches the mockups). */
+
+/* ---------- Onboarding ---------- */
+
+.onboarding {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 2rem 1.5rem calc(2rem + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(90% 55% at 50% -10%, rgba(134, 239, 172, 0.16), transparent 65%),
+    radial-gradient(70% 40% at 85% 30%, rgba(111, 124, 247, 0.08), transparent 70%),
+    #0b0c0f;
+  overflow: hidden;
+}
+
+.onboarding::before {
+  /* the x-ray sweep — one slow pass of light down the screen */
+  content: '';
+  position: absolute;
+  inset: -20% 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 40%,
+    rgba(134, 239, 172, 0.05) 50%,
+    transparent 60%
+  );
+  animation: sweep 5.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes sweep {
+  0%, 100% { transform: translateY(-30%); }
+  50% { transform: translateY(30%); }
+}
+
+.onboarding .wordmark {
+  position: absolute;
+  top: calc(1.5rem + env(safe-area-inset-top));
+  left: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: var(--rentgen-accent);
+}
+
+.onboarding h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(2.4rem, 9vw, 3.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+  color: #fff;
+}
+
+.onboarding h1 em {
+  font-style: normal;
+  color: var(--rentgen-accent);
+}
+
+.onboarding .pitch {
+  margin: 0 0 2rem;
+  color: #9ca3af;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  max-width: 30rem;
+}
+
+.onboarding .cta {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  max-width: 30rem;
+  padding: 1.05rem 2rem;
+  border-radius: 999px;
+  background: var(--rentgen-accent);
+  color: #05230f;
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 800;
+  box-shadow: 0 0 40px rgba(134, 239, 172, 0.35);
+  transition: transform 0.15s ease;
+}
+
+.onboarding .cta:active {
+  transform: scale(0.97);
+}
+
+.onboarding .disclaimer {
+  margin: 1rem 0 0;
+  color: #6b7280;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  max-width: 30rem;
+}
+
+/* ---------- Scanning ---------- */
+
+.scan-stage {
+  position: fixed;
+  inset: 0;
+  background: #000;
+}
+
+.scan-stage rentgen-scanner {
+  position: absolute;
+  inset: 0;
+}
+
+.scan-pill {
+  position: absolute;
+  top: calc(1rem + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(10, 12, 14, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.scan-pill .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f16a5f;
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  50% { opacity: 0.35; }
+}
+
+.scan-dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0 1rem calc(1rem + env(safe-area-inset-bottom));
+}
+
+.capture-card {
+  background: rgba(13, 15, 18, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 1rem;
+}
+
+.capture-card .head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.capture-card .head .title {
+  font-weight: 800;
+  color: #fff;
+  font-size: 1.05rem;
+}
+
+.capture-card .head .count {
+  min-width: 1.5rem;
+  height: 1.5rem;
+  display: grid;
+  place-items: center;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: #6f7cf7;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.capture-card .head .state {
+  margin-left: auto;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.capture-card .head .state.live {
+  color: var(--rentgen-accent);
+}
+
+.chip-row {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.85rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, black 92%, transparent);
+}
+
+.chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.85rem 0.5rem 0.5rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.chip .icon {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 9px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  display: grid;
+  place-items: center;
+  font-size: 0.95rem;
+}
+
+.chip .icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.chip-row .hint {
+  color: #6b7280;
+  font-size: 0.88rem;
+  font-weight: 500;
+  align-self: center;
+  padding: 0.4rem 0;
+}
+
+.stop-btn {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 0.85rem;
+  padding: 1rem;
+  border-radius: 999px;
+  background: #fff;
+  color: #101317;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  transition: transform 0.15s ease;
+}
+
+.stop-btn:active {
+  transform: scale(0.97);
+}
+
+.stop-btn .rec {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  background: #ef5350;
+}
+
+/* ---------- Review ---------- */
+
+.review {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 5rem;
+}
+
+.review .topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.back-btn {
+  appearance: none;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e5e7eb;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+}

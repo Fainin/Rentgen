@@ -131,6 +131,24 @@ export class RentgenScanner extends LitElement {
     input[type='file'] {
       display: none;
     }
+    /* Immersive mode: the host app owns the chrome; we own the full-bleed video. */
+    :host([immersive]) {
+      height: 100%;
+    }
+    :host([immersive]) .frame {
+      aspect-ratio: auto;
+      height: 100%;
+      max-height: none;
+      border-radius: 0;
+      background: #000;
+    }
+    :host([immersive]) .controls,
+    :host([immersive]) .status {
+      display: none;
+    }
+    :host([immersive]) .fallback {
+      padding-top: 20vh;
+    }
   `;
 
   declare private cameraReady: boolean;
@@ -139,6 +157,8 @@ export class RentgenScanner extends LitElement {
   declare private mode: Mode;
   declare private detectorState: DetectorState;
   declare private liveError: string;
+  /** Full-bleed video + auto-start live detection; the host app renders the chrome. */
+  declare immersive: boolean;
 
   static get properties() {
     return {
@@ -148,6 +168,7 @@ export class RentgenScanner extends LitElement {
       mode: { state: true },
       detectorState: { state: true },
       liveError: { state: true },
+      immersive: { type: Boolean, reflect: true },
     };
   }
 
@@ -170,6 +191,7 @@ export class RentgenScanner extends LitElement {
     this.mode = 'tap';
     this.detectorState = 'idle';
     this.liveError = '';
+    this.immersive = false;
   }
 
   connectedCallback(): void {
@@ -206,6 +228,7 @@ export class RentgenScanner extends LitElement {
         video.srcObject = this.stream;
         await video.play();
       }
+      if (this.immersive) void this.startLive();
     } catch (error: unknown) {
       this.cameraError =
         error instanceof Error && error.name === 'NotAllowedError'
@@ -393,8 +416,9 @@ export class RentgenScanner extends LitElement {
     this.visuals.set(id, { state: 'scanning' });
     emit('scan:start', {});
     try {
-      const result = await getClient().scan(toDataUrl(best.canvas));
-      this.visuals.set(id, { state: 'priced', chip: formatChip(result) });
+      const dataUrl = toDataUrl(best.canvas);
+      const result = await getClient().scan(dataUrl);
+      this.visuals.set(id, { state: 'priced', chip: formatChip(result, dataUrl) });
     } catch {
       this.visuals.set(id, { state: 'failed' }); // client already emitted scan:error
     }
@@ -442,18 +466,22 @@ export class RentgenScanner extends LitElement {
               </button>
             </div>`
         : html`<div class="fallback">${this.cameraError || 'Starting camera…'}</div>`}
-      <div class="fallback">
-        <label>
-          or scan a photo
-          <input type="file" accept="image/*" @change=${this.onFilePicked} />
-        </label>
-      </div>
+      ${this.immersive && this.cameraReady
+        ? ''
+        : html`<div class="fallback">
+            <label>
+              or scan a photo
+              <input type="file" accept="image/*" @change=${this.onFilePicked} />
+            </label>
+          </div>`}
     `;
   }
 }
 
-function formatChip(result: ScanResult): string {
-  const item = result.items[0];
+function formatChip(result: ScanResult, scanImage: string): string {
+  // The client returns the ACCUMULATED inventory; this object's item is the one carrying
+  // the crop we just sent (dedup may keep an older twin — then a plain check is fine).
+  const item = result.items.find((i) => i.image === scanImage);
   if (!item) return '✓';
   const sym = currencySymbol(result.currency);
   const min = Math.round(item.resale.min);

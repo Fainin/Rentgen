@@ -13,7 +13,7 @@ type RentgenElementProps = React.DetailedHTMLProps<
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
-      'rentgen-scanner': RentgenElementProps;
+      'rentgen-scanner': RentgenElementProps & { immersive?: boolean };
       'rentgen-results': RentgenElementProps;
       'rentgen-upsell': RentgenElementProps;
       'rentgen-report-card': RentgenElementProps;

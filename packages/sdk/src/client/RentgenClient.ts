@@ -39,10 +39,24 @@ export class RentgenClient {
   private readonly enrichment: EnrichmentAdapter;
   private readonly currency: string;
 
+  /**
+   * The running inventory. Every scan MERGES into it (deduped) and emits the full
+   * accumulated result, so a live pan's total climbs and consume(sessionId) always
+   * returns the whole inventory — not just the last crop's item.
+   */
+  private currentItems: readonly EnrichedItem[] = [];
+  private currentSessionId: string | null = null;
+
   constructor(options: RentgenClientOptions) {
     this.detection = options.detection;
     this.enrichment = options.enrichment;
     this.currency = options.currency ?? 'EUR';
+  }
+
+  /** Start a fresh inventory (e.g. a new walkthrough). Persisted sessions stay cached. */
+  resetSession(): void {
+    this.currentItems = [];
+    this.currentSessionId = null;
   }
 
   async scan(imageBase64: string): Promise<ScanResult> {
@@ -59,28 +73,30 @@ export class RentgenClient {
     return getSession(sessionId);
   }
 
+  /** Merge new items into the running inventory, persist, emit, return. */
+  private compile(newItems: readonly EnrichedItem[], imageHash: string): ScanResult {
+    if (!this.currentSessionId) this.currentSessionId = crypto.randomUUID();
+    const items = dedupItems([...this.currentItems, ...newItems]);
+    this.currentItems = items;
+    const result: ScanResult = {
+      sessionId: this.currentSessionId,
+      items,
+      totalIdleValue: totalIdleValue(items),
+      currency: this.currency,
+    };
+    // Persisting even empty results keeps rehearsal re-scans of the same image instant.
+    saveSession({ id: result.sessionId, imageHash, result, createdAt: Date.now() });
+    emit('scan:complete', result);
+    return result;
+  }
+
   private async runScan(imageBase64: string): Promise<ScanResult> {
     const imageHash = hashImage(imageBase64);
     const cached = findByImageHash(imageHash);
-    if (cached) {
-      emit('scan:complete', cached.result);
-      return cached.result;
-    }
+    if (cached) return this.compile(cached.result.items, imageHash);
 
     const objects = await this.detection.detect(imageBase64);
-    if (objects.length === 0) {
-      const empty: ScanResult = {
-        sessionId: crypto.randomUUID(),
-        items: [],
-        totalIdleValue: 0,
-        currency: this.currency,
-      };
-      // Persist even the empty result so a rehearsal re-scan of the same image is a
-      // cache hit instead of a repeat detection call.
-      saveSession({ id: empty.sessionId, imageHash, result: empty, createdAt: Date.now() });
-      emit('scan:complete', empty);
-      return empty;
-    }
+    if (objects.length === 0) return this.compile([], imageHash);
 
     const settled = await Promise.allSettled(
       objects.map((object) => this.enrichment.enrich(object)),
@@ -98,21 +114,6 @@ export class RentgenClient {
       throw new Error(`Pricing failed for every detected item (${reason}).`);
     }
 
-    const items = dedupItems(enriched);
-    const result: ScanResult = {
-      sessionId: crypto.randomUUID(),
-      items,
-      totalIdleValue: totalIdleValue(items),
-      currency: this.currency,
-    };
-
-    saveSession({
-      id: result.sessionId,
-      imageHash,
-      result,
-      createdAt: Date.now(),
-    });
-    emit('scan:complete', result);
-    return result;
+    return this.compile(enriched, imageHash);
   }
 }
