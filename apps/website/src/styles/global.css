@@ -340,3 +340,12 @@ button {
 .how-it-works__step p {
   color: var(--color-muted-fg);
 }
+
+.trust {
+  max-width: 720px;
+}
+
+.trust p {
+  color: var(--color-muted-fg);
+  font-size: 1.0625rem;
+}
