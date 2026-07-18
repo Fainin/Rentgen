@@ -144,6 +144,20 @@ Replace "tap to capture" with a **live pan** so the total climbs as you move the
 
 **Payoff (bonus):** `@rentgen/sdk`'s adapter pattern is directly reusable — it's the same shape as fainin's existing `plugin-open-ai` price recommendation engine, and the whole SDK is portable into any web product (React, Angular, plain HTML) as a drop-in component pair.
 
+## 10. Stability contract — the frozen allowlist
+
+The 5-workstream split (§8, and `specs/workstreams/`) only works if everyone builds against a surface that *doesn't move under them*. We adopt an **explicit stability allowlist** (the k6/OpenZeppelin model): only the symbols named here carry a stability guarantee — everything else (internal workstream modules, private helpers, experimental code) is free to change without ceremony.
+
+**Covered surface (change only by team agreement, never casually):**
+- `packages/sdk/src/types.ts` — `DetectedObject`, `EnrichedItem`, `ScanResult`, and the shared data shapes handed off between streams.
+- `packages/sdk/src/adapters/types.ts` — `DetectionAdapter` / `EnrichmentAdapter` / `AssetAdapter` interfaces and the `create*Adapter()` factory signatures.
+- `events.ts` — the shared event bus names (`scan:*`) and custom-element tags (`<rentgen-scanner>` / `<rentgen-results>` / `<rentgen-upsell>`).
+- The CSS custom-property theming vars (`--rentgen-accent`, `--rentgen-card-bg`, `--rentgen-radius`, `--rentgen-font`).
+
+**Rules:** breaking a covered symbol is a **major** change — pause, name the owning workstream, agree before diverging (this is the CLAUDE.md scope-discipline rule made concrete). We version `0.x` for the event: minor bumps *may* break pre-1.0, but a covered-symbol break is still an explicit, announced decision, not a merge surprise. Swapping an adapter's *transport* (e.g. the Tavily CORS fallback, §9) is **non-breaking** — the interface is the covered symbol; where the call runs is not.
+
+**Rationale & full best-practices background:** see [`../sdk-best-practices.md`](../sdk-best-practices.md) — a verified research digest behind these choices (ports & adapters, configure-once, deep-merge defaults, Lit + `@lit/react`, SemVer allowlist), plus anti-patterns to avoid and open items (notably **runtime validation at the adapter seams** — candidate Zod schemas on `DetectedObject`/`EnrichedItem`, which touches the frozen `types.ts` and needs team sign-off).
+
 ---
 
 *Design produced via the brainstorming skill, 2026-07-18. Pivoted from the original phase-based Idle Capital design to an SDK-first, two-package (`@rentgen/sdk` + `apps/app`), fully client-side architecture per Kevin's direction: one simple monorepo, SDK path + a React app that launches it, no backend where avoidable.*

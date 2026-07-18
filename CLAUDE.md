@@ -1,6 +1,6 @@
 # Rentgen — instructions for Claude Code
 
-> **Read `docs/specs/2026-07-18-rentgen-sdk-design.md` first — it is the source of truth.** This file is the fast operational summary.
+> **Read `docs/specs/2026-07-18-rentgen-sdk-design.md` first — it is the source of truth.** This file is the fast operational summary. For the *why* behind the SDK design (ports & adapters, configure-once, deep-merge defaults, Lit + `@lit/react`, the SemVer stability allowlist, and anti-patterns to avoid), see `docs/sdk-best-practices.md`.
 
 ## What this is
 
