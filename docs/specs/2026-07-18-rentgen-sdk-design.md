@@ -150,8 +150,9 @@ The 5-workstream split (§8, and `specs/workstreams/`) only works if everyone bu
 
 **Covered surface (change only by team agreement, never casually):**
 - `packages/sdk/src/types.ts` — `DetectedObject`, `EnrichedItem`, `ScanResult`, and the shared data shapes handed off between streams.
-- `packages/sdk/src/adapters/types.ts` — `DetectionAdapter` / `EnrichmentAdapter` / `AssetAdapter` interfaces and the `create*Adapter()` factory signatures.
-- `events.ts` — the shared event bus names (`scan:*`) and custom-element tags (`<rentgen-scanner>` / `<rentgen-results>` / `<rentgen-upsell>`).
+- `packages/sdk/src/adapters/types.ts` — the `DetectionAdapter` / `EnrichmentAdapter` / `AssetAdapter` interfaces.
+- The `create*Adapter()` factory signatures — `createDetectionAdapter` / `createEnrichmentAdapter` / `createAssetAdapter`, each exported from its owning stream's folder barrel (not from `adapters/types.ts`).
+- `events.ts` — the shared event bus names (`scan:*` plus `selection:change`) and the self-registering custom-element tags (`<rentgen-scanner>` / `<rentgen-results>` / `<rentgen-upsell>` / `<rentgen-report-card>`).
 - The CSS custom-property theming vars (`--rentgen-accent`, `--rentgen-card-bg`, `--rentgen-radius`, `--rentgen-font`).
 
 **Rules:** breaking a covered symbol is a **major** change — pause, name the owning workstream, agree before diverging (this is the CLAUDE.md scope-discipline rule made concrete). We version `0.x` for the event: minor bumps *may* break pre-1.0, but a covered-symbol break is still an explicit, announced decision, not a merge surprise. Swapping an adapter's *transport* (e.g. the Tavily CORS fallback, §9) is **non-breaking** — the interface is the covered symbol; where the call runs is not.

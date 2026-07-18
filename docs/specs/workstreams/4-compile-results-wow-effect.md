@@ -80,7 +80,7 @@ build against it in parallel and you swap their real modules in as they land —
 - **Selection contract.** `<rentgen-results>` owns the per-item checkboxes and the current
   selection. On every change it emits **`selection:change { sessionId, selectedItemIds }`** on
   the bus; Stream 5's export reads the latest set and lists only the selected subset. Default:
-  all items checked. Confirm the payload with Stream 5 before freezing it.
+  all items checked. Payload **confirmed with Stream 5 and frozen** in the README seam registry.
 - **Passive-income display (demo heuristic).** The extensible hero can show
   *"~€X/month passive"* computed **locally** as a fixed share of each item's resale midpoint
   (**5–10%/month**, one constant, single currency). Pure helper in `results/earnings.ts`; no

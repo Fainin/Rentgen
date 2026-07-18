@@ -243,8 +243,8 @@ interface AssetAdapterConfig {
 - `ExportBundle` rides under the loose `Asset` shape (`kind: 'export-bundle'`); put all
   upsell-specific fields under your own `kind`, never widen shared types.
 - Theme via CSS custom properties only (`--rentgen-accent`, `--rentgen-card-bg`, …).
-- Everything in `upsell/`; the only outside imports are the frozen types + the event name
-  `scan:complete`.
+- Everything in `upsell/`; the only outside imports are the frozen types + the event names
+  `scan:complete` and `selection:change` (both frozen in the README seam registry).
 - Sign-in trigger uses a **config callback** (`onSignInRequest`), NOT a new bus event — stays
   off the frozen `events.ts`.
 - **Phase discipline:** this is Phase 3. Don't start until the Phase-1 end-to-end demo is green
@@ -274,12 +274,15 @@ gap surfaces early instead of at demo time.
 These still cross frozen contracts or another stream's files. **Do not do them unilaterally** —
 name the owning stream and get agreement first.
 
-- **New custom-element tag `rentgen-report-card`** — adding a tag is a **frozen seam-registry**
-  change (workstreams README). → get team sign-off before registering it.
-- **Item selection state** — the result list's checkboxes ("N selected", "uncheck anything
-  you'll keep") live in **Stream 4's `<rentgen-results>`**. WS5 must export only the *selected*
-  subset → agree with Stream 4 how selection is shared (e.g. a selection accessor, or a
-  `selection:change` signal). Don't invent a field or render your own item list.
+- **Custom-element tag `rentgen-report-card`** — ✅ **resolved / already frozen.** It is already
+  registered as an S5-owned tag in the README seam registry, so build it directly — no further
+  sign-off needed. (Adding any *new* tag beyond it would still be a seam-registry change →
+  coordinate.)
+- **Item selection state** — ✅ **resolved / mechanism already frozen.** The result list's
+  checkboxes ("N selected", "uncheck anything you'll keep") live in **Stream 4's
+  `<rentgen-results>`**; WS5 exports only the *selected* subset by subscribing to the frozen
+  `selection:change { sessionId, selectedItemIds }` bus event (S4-owned, payload confirmed with
+  S5 — see the README seam registry). Don't invent a field or render your own item list.
 - You need a **price/field the result doesn't carry** (availability, price confidence,
   per-item currency) → **Stream 3** emits pricing, **Stream 4** owns the shape → agree first.
 - You need results to **restructure its layout/slot** for your widgets → **Stream 4**.

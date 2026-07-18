@@ -35,7 +35,7 @@ in it, each with a name, category, condition, and confidence. You use OpenAI vis
 
 ```ts
 // detection/index.ts
-export function createDetectionAdapter(config: { openaiApiKey?: string }): DetectionAdapter
+export function createDetectionAdapter(config: { openaiApiKey?: string; model?: 'gpt-4o' | 'gpt-4o-mini' }): DetectionAdapter
 ```
 
 Return type is the frozen `DetectionAdapter`. Stream 4 wires this into `configureRentgen`
@@ -58,8 +58,9 @@ by importing your factory — it never edits your files, you never edit its.
 ### Model & transport
 
 - **`gpt-4o`** with **Structured Outputs** (`response_format: { type: "json_schema", strict: true }`)
-  — the JSON always parses, no regex rescue. Use `gpt-4o-mini` only as a speed/cost fallback
-  switch in the factory config; brand/model reading off small crops is where mini gets worse.
+  — the JSON always parses, no regex rescue. Use `gpt-4o-mini` only as a speed/cost fallback,
+  selectable via the factory config's optional `model` field (default `gpt-4o`); brand/model
+  reading off small crops is where mini gets worse.
 - Plain browser `fetch` to `https://api.openai.com/v1/chat/completions`, key from the
   factory config. Image goes in as the data URL you received — no re-encoding (Stream 1
   already delivers ≤768 px JPEG; a Phase-1 full photo may be bigger — pass
@@ -98,7 +99,8 @@ object" — do **not** special-case crops. An empty array is a valid, correct an
   `category` ⇒ `"Other"`; missing `condition` ⇒ `"used - good"`; clamp `confidence` to 0..1.
 - Drop entries with `confidence < 0.3` — better a missed item than a garbage card in the
   demo.
-- Ids: `oa-<n>` with a per-call counter, per the seam registry.
+- Ids: `oa-<n>` with a per-call counter — a **Stream-2 convention** (prefixed so ids never
+  collide with other detection sources); not a registry-defined rule.
 - Cap at 12 objects per image (prompt *and* code) — a Phase-1 room shot must not explode
   Stream 3 with 30 parallel Tavily runs.
 
