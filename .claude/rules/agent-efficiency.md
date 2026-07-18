@@ -1,0 +1,15 @@
+Subagent efficiency conventions — how to spawn and run work inside subagents so they stay fast and cheap. Ported from restack's trace-analysis findings (`/trace-subagents`) and adapted for Rentgen (npm workspaces + tsup + Vite, no Nx; Windows/PowerShell default shell). Revisit when new traces surface fresh bottlenecks.
+
+- **Model routing — set `model` explicitly on every spawned agent; never let it inherit the session model.** A subagent with no `model` inherits the orchestrator's model (Fable 5 or Opus 4.x), which is overpowered for exploration and burns latency/cost on reasoning the task doesn't need. Tier by what the agent's output *feeds*:
+  - **Haiku** — locate/enumerate only: "where is X", "list files matching", "find all callers", grep-style sweeps. Pure retrieval, nothing to reason away.
+  - **Sonnet** — trace-and-explain that feeds a plan or an edit: "how does this flow across files", "report the signatures / return shapes / event names so I can change it". A cheap-but-90%-right map silently propagates into the plan and the code, so pay for accuracy here.
+  - **Opus / Fable** — never for exploration. Reserve the top tier for judgment: hard review, design trade-offs, gnarly multi-file implementation, adversarial verification.
+  - Pass it: Agent tool `model: 'haiku' | 'sonnet' | 'opus'`; workflow `agent(prompt, { model })`. In a Fable session, prefer `effort: 'low'` for the mechanical haiku/sonnet stages and reserve higher effort for the judgment stages.
+  - _Evidence:_ traced restack sessions ran `Explore` agents on Opus emitting only ~1–8k tokens of pure search output — identical result at a fraction of cost/latency; the miss was spawning without an explicit `model`.
+
+- **Search with the Grep / Glob tools, not shell `grep -r` / `find`.** The Grep tool is ripgrep — fast, gitignore-aware, and **shell-independent: it works identically under PowerShell and Bash**. Raw shell search is **not portable**: Rentgen runs on Windows where the PowerShell tool has no `rg`/`grep` installed and `find` resolves to Windows `find.exe` (incompatible flags); even in the Bash tool an unbounded `grep -r` is slow, and worse over cloud-synced trees (OneDrive).
+  - _Evidence:_ this very session's first shell `grep -r` over the OneDrive Brain **timed out past 120s and had to be backgrounded**; re-running the same search through the Grep tool returned in well under a second.
+
+- **Don't force cold rebuilds to get clean output.** For verification prefer the cheapest signal that answers the question: `npm run typecheck` (`tsc --noEmit`) over a full `npm run build`, and never `rm -rf node_modules` / reinstall inside an agent unless a dependency is genuinely broken. Cold installs and full builds cost tens of seconds to minutes each; the incremental path is correct the overwhelming majority of the time.
+
+When a tool genuinely needs a shell (running a build, a one-off script), that's fine — this rule is specifically about **searching code**, which should always go through the Grep/Glob tools.
