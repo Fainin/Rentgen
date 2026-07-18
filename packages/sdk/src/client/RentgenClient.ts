@@ -11,7 +11,7 @@ import type { EnrichedItem, ScanResult, Session } from '../types.js';
 import { emit } from '../events.js';
 import { findByImageHash, getSession, hashImage, saveSession } from '../storage/sessionStore.js';
 import { totalIdleValue } from '../results/total.js';
-import { attachItemImages } from './itemImage.js';
+import { attachItemImages, attachItemImagesFromFrames } from './itemImage.js';
 
 export interface RentgenClientOptions {
   readonly detection: DetectionAdapter;
@@ -92,6 +92,52 @@ export class RentgenClient {
 
   consume(sessionId: string): Session | null {
     return getSession(sessionId);
+  }
+
+  /**
+   * Frame-batch scan (the krempel pattern): ALL sampled keyframes of a pan go to the
+   * detection adapter in one call — the model dedupes across frames itself — then each
+   * item is enriched in parallel and gets a card photo cropped from its best frame.
+   * No image-hash cache: video frames are never byte-identical between runs.
+   */
+  async scanFrames(framesBase64: readonly string[]): Promise<ScanResult> {
+    try {
+      return await this.runScanFrames(framesBase64);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Scan failed unexpectedly.';
+      emit('scan:error', { message });
+      throw error;
+    }
+  }
+
+  private async runScanFrames(framesBase64: readonly string[]): Promise<ScanResult> {
+    const imageHash = hashImage(framesBase64[0] ?? '');
+    if (framesBase64.length === 0) return this.compile([], imageHash);
+    if (!this.detection.detectBatch) {
+      throw new Error('The configured detection adapter does not support frame batches.');
+    }
+
+    const objects = await this.detection.detectBatch(framesBase64);
+    if (objects.length === 0) return this.compile([], imageHash);
+
+    const settled = await Promise.allSettled(
+      objects.map((object) => this.enrichment.enrich(object)),
+    );
+    const priced = settled
+      .filter((r): r is PromiseFulfilledResult<EnrichedItem> => r.status === 'fulfilled')
+      .map((r) => r.value);
+    const enriched = await attachItemImagesFromFrames(priced, framesBase64);
+
+    if (enriched.length === 0) {
+      const firstFailure = settled.find(
+        (r): r is PromiseRejectedResult => r.status === 'rejected',
+      );
+      const reason =
+        firstFailure?.reason instanceof Error ? firstFailure.reason.message : 'unknown error';
+      throw new Error(`Pricing failed for every detected item (${reason}).`);
+    }
+
+    return this.compile(enriched, imageHash);
   }
 
   /** Merge new items into the running inventory, persist, emit, return. */

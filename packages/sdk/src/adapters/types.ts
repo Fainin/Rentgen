@@ -16,6 +16,13 @@ import type { Asset, DetectedObject, EnrichedItem, Session } from '../types.js';
  */
 export interface DetectionAdapter {
   detect(imageBase64: string): Promise<DetectedObject[]>;
+  /**
+   * Optional (sanctioned additive edit, 2026-07-18): analyze a whole video pan at once —
+   * all sampled keyframes in ONE model call. The model sees full-scene context, dedupes
+   * the same object across frames itself, and reports `frameIndex`/`box` per item.
+   * Default implementation: gemini-vision (the krempel pattern).
+   */
+  detectBatch?(framesBase64: readonly string[]): Promise<DetectedObject[]>;
 }
 
 /**

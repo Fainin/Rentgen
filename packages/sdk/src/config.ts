@@ -14,6 +14,8 @@ import { RentgenClient } from './client/RentgenClient.js';
 
 export interface RentgenConfig {
   readonly openaiApiKey?: string;
+  /** Preferred detection backend: Gemini, incl. whole-video frame batches. */
+  readonly geminiApiKey?: string;
   readonly tavilyApiKey?: string;
   readonly currency?: string;
   /** Vision model override for the detection adapter (default 'gpt-4.1'). */
@@ -43,6 +45,7 @@ export function configureRentgen(config: RentgenConfig): RentgenClient {
   const detection =
     config.adapters?.detection ??
     createDetectionAdapter({
+      geminiApiKey: config.geminiApiKey,
       openaiApiKey: config.openaiApiKey,
       model: config.detectionModel,
       minConfidence: config.detectionMinConfidence,

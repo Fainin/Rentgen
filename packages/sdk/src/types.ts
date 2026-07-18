@@ -43,6 +43,12 @@ export interface DetectedObject {
    * 2026-07-18: adjacent items were sharing the same card image.)
    */
   readonly box?: BoundingBox;
+  /**
+   * Frame-batch scans only (sanctioned additive edit, 2026-07-18): index into the frame
+   * array of the frame with the best view of this object — `box` is relative to THAT
+   * frame. Absent for single-image scans.
+   */
+  readonly frameIndex?: number;
 }
 
 /** A detected object priced against live comps (output of an EnrichmentAdapter). */

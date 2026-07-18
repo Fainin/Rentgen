@@ -5,8 +5,8 @@
  * (the SDK never reads import.meta.env).
  */
 
-import { useEffect, useState } from 'react';
-import { configureRentgen, on, preloadDetector, type EnrichedItem } from '@rentgen/sdk';
+import { useEffect, useRef, useState } from 'react';
+import { configureRentgen, on, type EnrichedItem } from '@rentgen/sdk';
 import './app.css';
 
 // `?stub=1` forces the offline stub adapters — the recorded-fallback / no-wifi demo path.
@@ -26,6 +26,9 @@ const DEMO_HINTS = [
 ];
 
 configureRentgen({
+  // Gemini drives detection (frame-batch capable — required by the scanner's frames mode);
+  // the OpenAI key stays for the enrichment reconcile step.
+  geminiApiKey: stubMode ? undefined : import.meta.env.VITE_GEMINI_API_KEY,
   openaiApiKey: stubMode ? undefined : import.meta.env.VITE_OPENAI_API_KEY,
   tavilyApiKey: stubMode || noTavily ? undefined : import.meta.env.VITE_TAVILY_API_KEY,
   detectionHints: DEMO_HINTS,
@@ -93,27 +96,26 @@ function Onboarding({ onStart }: { onStart: () => void }) {
 
 function ScanStage({
   captured,
-  pending,
+  frameCount,
+  analyzing,
   onStop,
 }: {
   captured: readonly EnrichedItem[];
-  pending: number;
+  frameCount: number;
+  analyzing: boolean;
   onStop: () => void;
 }) {
   const n = captured.length;
-  const pillText =
-    pending > 0
-      ? n === 0
-        ? 'Analyzing first find…'
-        : `${n} captured · ${pending} analyzing…`
-      : n === 0
-        ? 'Looking for gadgets…'
-        : `${n} gadget${n === 1 ? '' : 's'} captured`;
+  const pillText = analyzing
+    ? `Analyzing ${frameCount} frame${frameCount === 1 ? '' : 's'}…`
+    : frameCount > 0
+      ? `Filming · ${frameCount} frame${frameCount === 1 ? '' : 's'} captured`
+      : 'Filming… pan slowly across your things';
   // Newest finds first, so a fresh capture is always visible without scrolling.
   const newestFirst = [...captured].reverse();
   return (
     <div className="scan-stage">
-      <rentgen-scanner immersive />
+      <rentgen-scanner immersive frames />
       <div className="scan-pill">
         <span className="dot" />
         {pillText}
@@ -121,21 +123,21 @@ function ScanStage({
       <div className="scan-dock">
         <div className="capture-card">
           <div className="head">
-            <span className="title">Captured</span>
-            <span className="count">{n}</span>
-            <span className={`state ${n > 0 ? 'live' : ''}`}>
-              {n > 0 ? '✓ priced live' : 'Pan slowly'}
+            <span className="title">{analyzing ? 'Analyzing' : 'Captured'}</span>
+            <span className="count">{analyzing ? frameCount : n}</span>
+            <span className={`state ${n > 0 || analyzing ? 'live' : ''}`}>
+              {analyzing ? '✨ pricing finds' : n > 0 ? '✓ priced' : 'Pan slowly'}
             </span>
           </div>
           <div className="chip-row">
-            {Array.from({ length: pending }, (_, i) => (
-              <span className="chip ghost" key={`pending-${i}`}>
+            {analyzing ? (
+              <span className="chip ghost">
                 <span className="icon">✨</span>
-                Scanning…
+                Identifying &amp; pricing…
               </span>
-            ))}
-            {n === 0 && pending === 0 ? (
-              <span className="hint">Point the camera at anything worth money.</span>
+            ) : null}
+            {n === 0 && !analyzing ? (
+              <span className="hint">Film everything worth money, then stop.</span>
             ) : (
               newestFirst.map((item) => (
                 <span className="chip" key={item.id}>
@@ -151,9 +153,9 @@ function ScanStage({
               ))
             )}
           </div>
-          <button className="stop-btn" onClick={onStop}>
+          <button className="stop-btn" onClick={onStop} disabled={analyzing}>
             <span className="rec" />
-            Stop &amp; review
+            {analyzing ? 'Analyzing…' : 'Stop & review'}
           </button>
         </div>
       </div>
@@ -164,27 +166,47 @@ function ScanStage({
 export function App() {
   const [phase, setPhase] = useState<Phase>('onboarding');
   const [captured, setCaptured] = useState<readonly EnrichedItem[]>([]);
-  const [pending, setPending] = useState(0);
+  const [frameCount, setFrameCount] = useState(0);
+  const [analyzing, setAnalyzing] = useState(false);
+  const analyzingRef = useRef(false);
 
-  // Warm the on-device detector (WASM + model) during onboarding, so the moment the
-  // user taps "Start scanning" the live detector is already hot.
+  // Frame-batch flow: the scanner samples keyframes while filming (bubbling
+  // `rentgen-frames` events carry the count); "Stop & review" sends them all in ONE
+  // model call, and scan:complete flips to the review screen.
   useEffect(() => {
-    void preloadDetector();
-  }, []);
-
-  // The client emits the full accumulated inventory on every scan:complete; scan:start
-  // fires the moment a crop is captured — that drives the instant "Scanning…" ghost chip.
-  useEffect(() => {
+    const onFrames = (event: Event) =>
+      setFrameCount((event as CustomEvent<{ count: number }>).detail.count);
+    window.addEventListener('rentgen-frames', onFrames);
     const offs = [
-      on('scan:start', () => setPending((p) => p + 1)),
       on('scan:complete', (result) => {
         setCaptured(result.items);
-        setPending((p) => Math.max(0, p - 1));
+        if (analyzingRef.current) {
+          analyzingRef.current = false;
+          setAnalyzing(false);
+          setPhase('review');
+        }
       }),
-      on('scan:error', () => setPending((p) => Math.max(0, p - 1))),
+      on('scan:error', () => {
+        // Stay in the scan stage so the user can just press stop again.
+        analyzingRef.current = false;
+        setAnalyzing(false);
+      }),
     ];
-    return () => offs.forEach((off) => off());
+    return () => {
+      window.removeEventListener('rentgen-frames', onFrames);
+      offs.forEach((off) => off());
+    };
   }, []);
+
+  const onStop = () => {
+    const scanner = document.querySelector('rentgen-scanner') as
+      | (HTMLElement & { finishFrames(): Promise<void> })
+      | null;
+    if (!scanner) return;
+    analyzingRef.current = true;
+    setAnalyzing(true);
+    void scanner.finishFrames();
+  };
 
   return (
     <>
@@ -192,7 +214,13 @@ export function App() {
           during scanning instead of missing them and rendering empty. */}
       <main className="review" style={{ display: phase === 'review' ? undefined : 'none' }}>
         <div className="topbar">
-          <button className="back-btn" onClick={() => setPhase('scanning')}>
+          <button
+            className="back-btn"
+            onClick={() => {
+              setFrameCount(0);
+              setPhase('scanning');
+            }}
+          >
             ← Scan more
           </button>
           <h1
@@ -207,7 +235,12 @@ export function App() {
       </main>
       {phase === 'onboarding' && <Onboarding onStart={() => setPhase('scanning')} />}
       {phase === 'scanning' && (
-        <ScanStage captured={captured} pending={pending} onStop={() => setPhase('review')} />
+        <ScanStage
+          captured={captured}
+          frameCount={frameCount}
+          analyzing={analyzing}
+          onStop={onStop}
+        />
       )}
     </>
   );

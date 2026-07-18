@@ -66,3 +66,37 @@ export async function attachItemImages(
     }
   });
 }
+
+/**
+ * Frame-batch variant: each item's photo comes from ITS best frame (item.frameIndex),
+ * cropped to item.box when present. Same never-throw guarantee as attachItemImages.
+ */
+export async function attachItemImagesFromFrames(
+  items: readonly EnrichedItem[],
+  frames: readonly string[],
+): Promise<readonly EnrichedItem[]> {
+  const frameFor = (item: EnrichedItem): string | undefined =>
+    frames[item.frameIndex ?? 0] ?? frames[0];
+
+  const decoded = new Map<number, HTMLImageElement>();
+  return Promise.all(
+    items.map(async (item) => {
+      const frame = frameFor(item);
+      if (!frame) return item;
+      const withFull = { ...item, image: frame };
+      if (!item.box) return withFull;
+      try {
+        const index = item.frameIndex ?? 0;
+        let img = decoded.get(index);
+        if (!img) {
+          img = await loadImage(frame);
+          decoded.set(index, img);
+        }
+        const cropped = cropToBox(img, item.box);
+        return cropped ? { ...withFull, image: cropped } : withFull;
+      } catch {
+        return withFull;
+      }
+    }),
+  );
+}

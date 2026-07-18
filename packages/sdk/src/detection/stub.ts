@@ -24,15 +24,21 @@ function seedFrom(imageBase64: string): number {
 }
 
 export function createStubDetectionAdapter(): DetectionAdapter {
+  const detect = async (imageBase64: string): Promise<DetectedObject[]> => {
+    const seed = seedFrom(imageBase64);
+    const count = 3 + (seed % 3);
+    const start = seed % CATALOG.length;
+    return Array.from({ length: count }, (_, i) => {
+      const entry = CATALOG[(start + i) % CATALOG.length];
+      return { ...entry, id: `stub-${i}` };
+    });
+  };
   return {
-    async detect(imageBase64: string): Promise<DetectedObject[]> {
-      const seed = seedFrom(imageBase64);
-      const count = 3 + (seed % 3);
-      const start = seed % CATALOG.length;
-      return Array.from({ length: count }, (_, i) => {
-        const entry = CATALOG[(start + i) % CATALOG.length];
-        return { ...entry, id: `stub-${i}` };
-      });
+    detect,
+    async detectBatch(framesBase64: readonly string[]): Promise<DetectedObject[]> {
+      // Deterministic like detect(): seed from the first frame, tag frameIndex 0.
+      const items = await detect(framesBase64[0] ?? '');
+      return items.map((item) => ({ ...item, frameIndex: 0 }));
     },
   };
 }
