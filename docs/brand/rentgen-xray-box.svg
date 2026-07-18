@@ -1,0 +1,22 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Rentgen "X-ray Box" Rev. 2 — Grün-€ (#4ade80) statt Gold, Deckel-Linie entfernt.
+       Quelle: Artifact "Rentgen — Logo-Varianten" (aa1b93c3), App-Icon-Fassung auf Navy. -->
+  <rect x="0" y="0" width="100" height="100" rx="24" fill="#0f172a"/>
+  <defs>
+    <linearGradient id="tr" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4ade80" stop-opacity="0"/>
+      <stop offset="1" stop-color="#4ade80" stop-opacity="0.30"/>
+    </linearGradient>
+    <clipPath id="ab"><rect x="0" y="0" width="100" height="46"/></clipPath>
+    <clipPath id="be"><rect x="0" y="46" width="100" height="54"/></clipPath>
+  </defs>
+  <g fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" opacity="0.85">
+    <rect x="28" y="28" width="44" height="46" rx="4"/>
+  </g>
+  <g font-family="ui-rounded,system-ui,sans-serif" font-weight="800" font-size="38" text-anchor="middle">
+    <text x="50" y="61" fill="#38bdf8" opacity="0.4" clip-path="url(#ab)">€</text>
+    <text x="50" y="61" fill="#4ade80" clip-path="url(#be)">€</text>
+  </g>
+  <rect x="24" y="33" width="52" height="13" fill="url(#tr)"/>
+  <line x1="23" y1="46" x2="77" y2="46" stroke="#4ade80" stroke-width="3" stroke-linecap="round"/>
+</svg>

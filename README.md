@@ -1,5 +1,7 @@
 # Rentgen
 
+<img src="docs/brand/rentgen-xray-box-1024.png" width="96" align="right" alt="Rentgen logo — X-rayed box revealing a green €">
+
 > **Point your phone at your stuff → an agent identifies each item, prices its resale + rent/day against live web comps → an idle-capital total adds up.**
 > Ends on: *"You're sitting on €4,200 doing nothing."* 🎤
 
@@ -59,6 +61,7 @@ CLAUDE.md       instructions for Claude Code working in this repo
 
 - **[`docs/`](docs/README.md)** — the design, demo script, build order, team split.
 - **[`packages/sdk/README.md`](packages/sdk/README.md)** — how to embed the widgets and write adapters.
+- **[`docs/brand/`](docs/brand/README.md)** — logo (SVG master + PNG), palette, export how-to.
 
 ## Build order (phases are a firewall)
 
