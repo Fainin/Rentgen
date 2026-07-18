@@ -55,15 +55,41 @@ bundle) plus two widgets (export panel + report card).
 - `upsell/enrichers/` — the pluggable **listing-enricher provider** layer (see below). Ships
   `description-provider.ts` (title + description) and `photo-provider.ts` (crop → primary
   photo) as defaults.
-- `upsell/rentgen-upsell.ts` — the `<rentgen-upsell>` element: a **purely functional export
-  panel**. Subscribes to `scan:complete`; reflects auth state; on click, assembles the bundle
-  and fires the handoff (and calls the registered uploader, if any).
+- `upsell/rentgen-upsell.ts` — the `<rentgen-upsell>` element: the **export action bar** shown
+  at the bottom of the result screen (see Reference UI). Subscribes to `scan:complete`; reflects
+  auth state; shows the selection summary + a primary **"List N"** button that runs the
+  configured export action(s) — assembling the bundle from the **selected** items, firing the
+  push callback, and calling the registered uploader/action.
 - `upsell/rentgen-report-card.ts` — the `<rentgen-report-card>` element: a shareable summary
   with **named light-DOM slots** for the host to extend.
 - `upsell/projection.ts` — optional pure helpers (rank by rent/day, monthly projection). Not
   the focus; keep only if cheap.
 - `upsell/index.ts` — barrel exporting **`createAssetAdapter(config)`** + both elements + the
   public types the host implements against (`UploadAdapter`, `ExportBundle`, `AuthContext`).
+
+## Reference UI — the result screen (target)
+
+![Result list mockup — a checklist of detected gadgets with per-item rent/resale, an earnings
+hero, and a bottom "List N gadgets" action bar](../../mockup/result-list-mockup.png)
+
+An **example** of the later result screen (illustrative, not final). Most of it — the
+"3 gadgets found" list, the per-item cards, and the "You could earn €197/wk" hero — is
+**Stream 4's `<rentgen-results>`** ("compile results with wow effect"). WS5 owns the **bottom
+action bar**: the selection summary (`3 selected · €197/wk`) and the primary **"List N gadgets"**
+button.
+
+That button is your **export surface**, and it must support **more than one action** — e.g.
+*Upload to fainin* (the host's `UploadAdapter`), plus alternatives like *download the bundle* or
+*share the report card*. Model it as a small set of host-configured `ExportAction`s (see config),
+with the registered `uploader` as the primary one; render a menu / split-button when several are
+configured.
+
+Two details from the mockup that shape the contract:
+- **Only *checked* items export.** "Uncheck anything you'll keep" → the bundle contains the
+  **selected subset**, not every detected item. The checkboxes live in the results list — see the
+  selection flashpoint below.
+- The **hero earnings** (`€197/wk`, `€2,810 if you sell instead`) can reuse `projection.ts` pure
+  helpers, but are **rendered by Stream 4**, not WS5.
 
 ## The bundle — the generic handoff
 
@@ -117,6 +143,18 @@ interface UploadResult {
   readonly ok: boolean;
   readonly uploaded: number;             // how many drafts were accepted
   readonly message?: string;
+}
+```
+
+The bottom "List N" button can expose **multiple** export actions (see Reference UI). Each is a
+host-supplied `ExportAction`; the registered `uploader` is surfaced as the primary
+"upload"-type action.
+
+```ts
+interface ExportAction {
+  readonly id: string;
+  readonly label: string;                // e.g. "List on fainin", "Download bundle", "Share card"
+  run(bundle: ExportBundle): Promise<UploadResult | void> | UploadResult | void;
 }
 ```
 
@@ -174,7 +212,8 @@ createAssetAdapter(config: AssetAdapterConfig): AssetAdapter
 interface AssetAdapterConfig {
   readonly auth?: AuthContext;
   readonly providers?: readonly ListingEnricher[];
-  readonly uploader?: UploadAdapter;                          // host's upload code (optional)
+  readonly uploader?: UploadAdapter;                          // host's upload code (primary action)
+  readonly actions?: readonly ExportAction[];                 // extra "List N" button actions
   readonly onExportReady?: (bundle: ExportBundle) => void;    // PUSH
   readonly onSignInRequest?: () => void;                      // widget → host sign-in trigger
 }
@@ -237,6 +276,10 @@ name the owning stream and get agreement first.
 
 - **New custom-element tag `rentgen-report-card`** — adding a tag is a **frozen seam-registry**
   change (workstreams README). → get team sign-off before registering it.
+- **Item selection state** — the result list's checkboxes ("N selected", "uncheck anything
+  you'll keep") live in **Stream 4's `<rentgen-results>`**. WS5 must export only the *selected*
+  subset → agree with Stream 4 how selection is shared (e.g. a selection accessor, or a
+  `selection:change` signal). Don't invent a field or render your own item list.
 - You need a **price/field the result doesn't carry** (availability, price confidence,
   per-item currency) → **Stream 3** emits pricing, **Stream 4** owns the shape → agree first.
 - You need results to **restructure its layout/slot** for your widgets → **Stream 4**.
@@ -251,10 +294,13 @@ name the owning stream and get agreement first.
 
 ## Definition of done
 
-- After a scan, `<rentgen-upsell>` reflects auth state and, when signed in, produces an
-  `ExportBundle` on export — delivered both by **pull** (`render(session)`) and **push**
-  (`onExportReady`) — with generated title/description, price ranges, sources, and (when
-  available) a cropped photo per item.
+- After a scan, `<rentgen-upsell>` renders the bottom action bar (selection summary + "List N"
+  button, per the Reference UI), reflects auth state, and — when signed in — produces an
+  `ExportBundle` of the **selected** items on export, delivered both by **pull**
+  (`render(session)`) and **push** (`onExportReady`), with generated title/description, price
+  ranges, sources, and (when available) a cropped photo per item.
+- The "List N" button runs the configured export action(s) — the host's `uploader` as primary,
+  plus any extra `actions` (e.g. download bundle, share card).
 - The bundle is **generic and marketplace-schema-free**; the host uploads it on its own side,
   optionally via a host-registered `UploadAdapter`.
 - **No customer-specific code, names, or schema** live in this repo — fainin is a consumer, not
