@@ -1,4 +1,4 @@
-﻿interface Step {
+interface Step {
   title: string;
   description: string;
 }
