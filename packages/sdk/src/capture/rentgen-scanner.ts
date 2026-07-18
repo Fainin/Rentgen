@@ -18,7 +18,7 @@ import { css, html, LitElement } from 'lit';
 import { emit } from '../events.js';
 import { getClient } from '../config.js';
 import type { ScanResult } from '../types.js';
-import { loadDetector, type Detector } from './detector.js';
+import { loadDetector, reloadDetectorCpu, type Detector } from './detector.js';
 import { emptyTracker, updateTracker, type TrackerState } from './tracker.js';
 import {
   captureCandidate,
@@ -34,6 +34,9 @@ import { drawOverlay, type OverlayTheme, type VisualState } from './overlay.js';
 const MAX_SIDE = 1280;
 const JPEG_QUALITY = 0.85;
 const DETECT_INTERVAL_MS = 120; // ~8 detector fps; overlay still redraws every frame.
+// A GPU delegate can initialize fine yet read blank frames forever (zero detections).
+// After this many consecutive empty inferences (~5 s) we rebuild on CPU once.
+const GPU_ZERO_STREAK_LIMIT = 40;
 
 type Mode = 'tap' | 'live';
 type DetectorState = 'idle' | 'loading' | 'ready' | 'error';
@@ -187,6 +190,8 @@ export class RentgenScanner extends LitElement {
   private rafId = 0;
   private lastDetectMs = 0;
   private theme: OverlayTheme = DEFAULT_THEME;
+  private zeroStreak = 0;
+  private cpuFallbackDone = false;
 
   constructor() {
     super();
@@ -387,10 +392,31 @@ export class RentgenScanner extends LitElement {
     this.lastDetectMs = now;
 
     const detections = this.detector.detect(video, now);
+    this.watchGpuHealth(detections.length);
     const next = updateTracker(this.trackerState, detections);
     this.trackerState = next;
     this.syncTracks(next, video);
   };
+
+  /** Swap to the CPU delegate once if the GPU delegate only ever returns empty frames. */
+  private watchGpuHealth(detectionCount: number): void {
+    if (this.cpuFallbackDone || this.detector?.delegate !== 'GPU') return;
+    this.zeroStreak = detectionCount === 0 ? this.zeroStreak + 1 : 0;
+    if (this.zeroStreak < GPU_ZERO_STREAK_LIMIT) return;
+    this.cpuFallbackDone = true;
+    console.warn(
+      '[rentgen-scanner] GPU delegate returned no detections for ~5s — rebuilding on CPU',
+    );
+    void reloadDetectorCpu()
+      .then((d) => {
+        this.detector = d;
+        this.zeroStreak = 0;
+      })
+      .catch(() => {
+        this.detectorState = 'error';
+        this.liveError = 'On-device detector failed to load. Use tap-to-scan instead.';
+      });
+  }
 
   /** Buffer crops, gate newly-confirmed tracks into scans, prune dead tracks. */
   private syncTracks(next: TrackerState, video: HTMLVideoElement): void {

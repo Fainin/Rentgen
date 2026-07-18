@@ -20,6 +20,8 @@ export interface Detection {
 }
 
 export interface Detector {
+  /** Which delegate this instance runs on — the scanner uses this for the CPU fallback. */
+  readonly delegate: 'GPU' | 'CPU';
   /** Run one inference over the current video frame. `timestampMs` must be monotonic. */
   detect(video: HTMLVideoElement, timestampMs: number): readonly Detection[];
   close(): void;
@@ -61,7 +63,17 @@ export function loadDetector(): Promise<Detector> {
   return loadPromise;
 }
 
-async function createDetector(): Promise<Detector> {
+/**
+ * Rebuild forcing the CPU delegate. Some environments initialize a GPU delegate without
+ * error but silently return ZERO detections forever (blank texture reads) — the scanner
+ * calls this when live inference stays empty for a few seconds.
+ */
+export function reloadDetectorCpu(): Promise<Detector> {
+  loadPromise = createDetector('CPU');
+  return loadPromise;
+}
+
+async function createDetector(force?: 'CPU'): Promise<Detector> {
   const { FilesetResolver, ObjectDetector } = await import('@mediapipe/tasks-vision');
   const vision = await FilesetResolver.forVisionTasks(WASM_BASE);
 
@@ -75,13 +87,22 @@ async function createDetector(): Promise<Detector> {
 
   // GPU is much faster but unavailable on some devices/browsers — fall back to CPU.
   let impl: MpObjectDetector;
-  try {
-    impl = await build('GPU');
-  } catch {
+  let delegate: 'GPU' | 'CPU';
+  if (force === 'CPU') {
     impl = await build('CPU');
+    delegate = 'CPU';
+  } else {
+    try {
+      impl = await build('GPU');
+      delegate = 'GPU';
+    } catch {
+      impl = await build('CPU');
+      delegate = 'CPU';
+    }
   }
 
   return {
+    delegate,
     detect(video, timestampMs) {
       const result = impl.detectForVideo(video, timestampMs);
       const out: Detection[] = [];

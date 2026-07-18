@@ -107,6 +107,15 @@ directly, AND the allowlist includes `./src/**/index.ts`. Detection signal: the
 `vision_bundle` (MediaPipe) chunk appears in the build output only when the scanner made
 it in. Lesson: smoke-test the PRODUCTION bundle (`vite preview`), not just dev.
 
+## MediaPipe GPU delegate can be silently blank — zero detections, no error
+The GPU delegate can initialize without throwing yet return zero detections forever
+(blank texture reads; seen in the embedded-panel browser, possible on real devices with
+broken WebGL). The scanner watches for it: ≥40 consecutive empty inferences (~5 s) with a
+GPU delegate → `reloadDetectorCpu()` rebuilds on CPU once (console.warn logged). CPU
+EfficientDet-Lite0 int8 is fast enough for the demo. Verified end-to-end with a fake
+`canvas.captureStream()` camera: fallback fires → tracker confirms → one scan per object
+→ AR chips with per-object prices → real crops on every review item.
+
 ## Camera error UX (ported from krempel main.ts)
 Upfront `navigator.mediaDevices?.getUserMedia` existence check (in-app browsers ship
 without it) with an explicit "open in Safari/Chrome" message; real error NAMES surfaced
