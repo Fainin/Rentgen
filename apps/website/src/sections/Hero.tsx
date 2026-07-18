@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { XrayReveal } from '../hero/XrayReveal';
 import { RoomIllustration } from '../hero/RoomIllustration';
 import { ItemMarker } from '../hero/ItemMarker';
+import { MoneyCounter } from '../hero/MoneyCounter';
 import { REVEAL_ITEMS } from '../hero/items';
 
 export function Hero() {
@@ -17,6 +18,7 @@ export function Hero() {
         </a>
       </div>
       <div className="hero__stage">
+        <MoneyCounter reveal={reveal} />
         <XrayReveal
           reveal={reveal}
           onRevealChange={setReveal}

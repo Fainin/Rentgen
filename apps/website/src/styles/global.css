@@ -243,3 +243,29 @@ button {
   color: var(--color-bg);
   white-space: nowrap;
 }
+
+.money-counter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .money-counter {
+    align-items: flex-start;
+  }
+}
+
+.money-counter__value {
+  font-family: var(--font-heading);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.money-counter__label {
+  color: var(--color-muted-fg);
+  font-size: 0.875rem;
+}
