@@ -1,4 +1,4 @@
-interface Step {
+﻿interface Step {
   title: string;
   description: string;
 }
@@ -10,7 +10,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'We identify each item',
-    description: "Vision AI recognizes what you're looking at, item by item, in real time.",
+    description: "Vision AI recognizes what you’re looking at, item by item, in real time.",
   },
   {
     title: 'See resale + rent/day, instantly',
@@ -36,3 +36,4 @@ export function HowItWorks() {
     </section>
   );
 }
+
