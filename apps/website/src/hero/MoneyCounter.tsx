@@ -13,7 +13,7 @@ export function MoneyCounter({ reveal }: MoneyCounterProps) {
   return (
     <div className="money-counter" role="status" aria-live="polite">
       <span className="money-counter__value">{formatCurrency(amount)}</span>
-      <span className="money-counter__label">per month, idle in your room</span>
+      <span className="money-counter__label">of idle capital in your room</span>
     </div>
   );
 }
