@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { XrayReveal } from '../hero/XrayReveal';
+import { RoomIllustration } from '../hero/RoomIllustration';
+import { ItemMarker } from '../hero/ItemMarker';
+import { REVEAL_ITEMS } from '../hero/items';
 
 export function Hero() {
   const [reveal, setReveal] = useState(0);
@@ -17,8 +20,15 @@ export function Hero() {
         <XrayReveal
           reveal={reveal}
           onRevealChange={setReveal}
-          beforeContent={<div className="hero__layer-fill hero__layer-fill--before" />}
-          afterContent={<div className="hero__layer-fill hero__layer-fill--after" />}
+          beforeContent={<RoomIllustration variant="before" />}
+          afterContent={
+            <>
+              <RoomIllustration variant="after" />
+              {REVEAL_ITEMS.map((item) => (
+                <ItemMarker key={item.id} item={item} revealed={reveal >= item.x} />
+              ))}
+            </>
+          }
         />
       </div>
     </section>
