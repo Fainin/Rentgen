@@ -79,7 +79,7 @@ interface FaininListingDraft {
   readonly condition: string;
   readonly salePrice: PriceRange;        // = EnrichedItem.resale
   readonly rentPricePerDay: PriceRange;  // = EnrichedItem.rentPerDay
-  readonly photo?: ListingAsset;         // cropped product image — OPTIONAL, see flashpoint #1
+  readonly photo?: ListingAsset;         // from EnrichedItem.image — see "Assumed upstream" #1
   readonly sources: readonly Source[];   // provenance behind the price
   readonly attributes: Record<string, unknown>; // brand / model / EAN / specs … from providers
 }
@@ -182,27 +182,39 @@ interface AssetAdapterConfig {
 - **Phase discipline:** this is Phase 3. Don't start until the Phase-1 end-to-end demo is green
   (README golden rules) — a broken export must never block the core demo.
 
+## ✅ Assumed upstream (already designed by other streams — verify, don't rebuild)
+
+Treat these as **done and available** — the owning streams designed them, so build straight
+against them rather than re-coordinating. Each carries a quick **sanity check** so a silent
+gap surfaces early instead of at demo time.
+
+1. **Cropped photo on each item.** **Stream 1** (capture) attaches a best-frame crop and
+   **Stream 4** added the **optional** `readonly image?` field to the frozen types, so a
+   per-item photo rides in on `EnrichedItem`. WS5's `photoProvider` maps it to the primary
+   `photo`.
+   - 🔎 **Sanity check:** confirm `item.image` is actually populated before relying on it. If
+     it's missing/empty, **degrade gracefully** — export without a photo (or a placeholder) so
+     the bundle still ships — and flag it; never fail the whole export over a missing image.
+2. **`configureRentgen` pass-through.** **Stream 4** forwards an opaque `asset` config blob
+   straight to `createAssetAdapter` untouched, so the host's `{ auth, providers, callbacks }`
+   arrives intact.
+   - 🔎 **Sanity check:** on init, assert the `asset` config actually arrived (non-null
+     `auth`). If it didn't, surface a clear "fainin export not configured" state rather than
+     silently rendering a dead panel.
+
 ## 🚧 Scope flashpoints — STOP & coordinate (Claude: enforce this)
 
-These cross frozen contracts or another stream's files. **Do not do them unilaterally** —
+These still cross frozen contracts or another stream's files. **Do not do them unilaterally** —
 name the owning stream and get agreement first.
 
-1. **Cropped photo is NOT in `ScanResult` today** *(biggest dependency)*. Neither
-   `DetectedObject` nor `EnrichedItem` carries image data. A real per-item photo needs
-   **Stream 1** (capture) to attach a best-frame crop and **Stream 4** to add an **optional**
-   `readonly image?` field to the frozen types. → **team decision.** Until then, WS5 designs
-   against `photo?` optional and **degrades gracefully**: exports without a photo (or a
-   placeholder) so the bundle still ships.
-2. **`configureRentgen` pass-through** — **Stream 4** forwards an opaque `asset` config blob
-   straight to `createAssetAdapter` untouched. Tiny ask, but it's their file.
-3. **New custom-element tag `rentgen-report-card`** — adding a tag is a **frozen seam-registry**
-   change (workstreams README). → get team sign-off before registering it.
-4. You need a **price/field the result doesn't carry** (availability, price confidence,
-   per-item currency) → **Stream 3** emits pricing, **Stream 4** owns the shape → agree first.
-5. You need results to **restructure its layout/slot** for your widgets → **Stream 4**.
-6. Claude: if a task needs data the `ScanResult` doesn't already contain, **stop, name the
-   owning stream (1, 3, or 4), and ask me to coordinate** — don't invent a field or reach into
-   their files.
+- **New custom-element tag `rentgen-report-card`** — adding a tag is a **frozen seam-registry**
+  change (workstreams README). → get team sign-off before registering it.
+- You need a **price/field the result doesn't carry** (availability, price confidence,
+  per-item currency) → **Stream 3** emits pricing, **Stream 4** owns the shape → agree first.
+- You need results to **restructure its layout/slot** for your widgets → **Stream 4**.
+- Claude: if a task needs data the `ScanResult` doesn't already contain, **stop, name the
+  owning stream (1, 3, or 4), and ask me to coordinate** — don't invent a field or reach into
+  their files.
 
 ## Do NOT touch (frozen / other owners)
 
