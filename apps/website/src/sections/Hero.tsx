@@ -3,10 +3,12 @@ import { XrayReveal } from '../hero/XrayReveal';
 import { RoomIllustration } from '../hero/RoomIllustration';
 import { ItemMarker } from '../hero/ItemMarker';
 import { MoneyCounter } from '../hero/MoneyCounter';
+import { useAutoSweep } from '../hero/useAutoSweep';
 import { REVEAL_ITEMS } from '../hero/items';
 
 export function Hero() {
   const [reveal, setReveal] = useState(0);
+  useAutoSweep(setReveal);
 
   return (
     <section className="hero" aria-label="Rentgen interactive demo">
