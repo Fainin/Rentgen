@@ -49,6 +49,18 @@ keys after the event; they are demo-scoped and embedded in the browser bundle by
 `scan:error` by RentgenClient. Don't add a second `scan:start` in the client — widgets
 would double-react.
 
+## Video-verified: hints + nano find the exact demo products (2026-07-18 ~18:05)
+Real phone video (Zenbook S14 → DJI Osmo Pocket 4 → Ray-Ban Meta → Switch 2) through the
+full live pipeline (real vision, `?notavily=1` stub pricing):
+- WITHOUT hints (gpt-4.1): all 4 products found but fragmented/misbranded — 15 items,
+  laptop appeared 6× as "Surface/HP/MacBook", Switch 2 misread as "Valve Steam Deck".
+- WITH `detectionHints` (demo inventory in App.tsx) + gpt-4.1-nano: exactly the target
+  inventory by EXACT name, 5 items, junk gone. Hints also make names angle-stable, which
+  is what lets the name-dedup merge correctly.
+Vision latency: gpt-4.1-nano 0.9–1.3s (new default) vs mini ~1.4s vs gpt-4.1 2.2–3.9s.
+Test rig: seek-stepped video → canvas.captureStream (panel blocks video.play()).
+`preloadDetector()` runs during onboarding — detector ready in ~170ms at scan start.
+
 ## Detection tuned for listing quality (2026-07-18 ~17:10)
 "Too many things at once, especially bottles." Three-layer fix:
 1. **Detector (capture):** score threshold 0.25 → 0.4, max results 20 → 10, boxes under

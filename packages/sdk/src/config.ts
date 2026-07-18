@@ -20,6 +20,8 @@ export interface RentgenConfig {
   readonly detectionModel?: string;
   /** Listing-quality gate: drop detected items below this confidence (default 0.8). */
   readonly detectionMinConfidence?: number;
+  /** Known products likely to appear (demo inventory) — steadies naming across angles. */
+  readonly detectionHints?: readonly string[];
   /**
    * Opaque Stream-5 config blob ({ auth, providers, uploader, actions, callbacks }).
    * Forwarded UNTOUCHED to createAssetAdapter — Stream 4 never reads or reshapes it.
@@ -44,6 +46,7 @@ export function configureRentgen(config: RentgenConfig): RentgenClient {
       openaiApiKey: config.openaiApiKey,
       model: config.detectionModel,
       minConfidence: config.detectionMinConfidence,
+      hints: config.detectionHints,
     });
   const enrichment =
     config.adapters?.enrichment ??

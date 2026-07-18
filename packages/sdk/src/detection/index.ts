@@ -13,6 +13,8 @@ export interface DetectionConfig {
   readonly model?: string;
   /** Listing-quality gate: drop items below this identification confidence (default 0.8). */
   readonly minConfidence?: number;
+  /** Known products likely to appear — steadies naming and fixes brand misreads. */
+  readonly hints?: readonly string[];
 }
 
 export function createDetectionAdapter(config: DetectionConfig): DetectionAdapter {
@@ -21,6 +23,7 @@ export function createDetectionAdapter(config: DetectionConfig): DetectionAdapte
       openaiApiKey: config.openaiApiKey,
       model: config.model,
       minConfidence: config.minConfidence,
+      hints: config.hints,
     });
   }
   return createStubDetectionAdapter();

@@ -16,9 +16,19 @@ const params = new URLSearchParams(window.location.search);
 const stubMode = params.has('stub');
 const noTavily = params.has('notavily');
 
+// Rehearsed demo inventory — steadies naming for the products we actually bring on stage.
+// Edit freely; remove entries for a "cold" unknown-room demo.
+const DEMO_HINTS = [
+  'Asus Zenbook S14 laptop',
+  'DJI Osmo Pocket 4 gimbal camera',
+  'Ray-Ban Meta smart glasses',
+  'Nintendo Switch 2 console',
+];
+
 configureRentgen({
   openaiApiKey: stubMode ? undefined : import.meta.env.VITE_OPENAI_API_KEY,
   tavilyApiKey: stubMode || noTavily ? undefined : import.meta.env.VITE_TAVILY_API_KEY,
+  detectionHints: DEMO_HINTS,
   currency: 'EUR',
   asset: {
     auth: { isAuthenticated: true, user: { id: 'demo-host-user', displayName: 'Demo' } },

@@ -110,10 +110,25 @@ const JSON_SCHEMA = {
 
 interface OpenAIVisionConfig {
   readonly openaiApiKey: string;
-  /** e.g. 'gpt-4.1' (default), 'gpt-4.1-mini', 'gpt-4o'. */
+  /** e.g. 'gpt-4.1-nano' (default, fastest), 'gpt-4.1-mini', 'gpt-4.1'. */
   readonly model?: string;
   /** Drop items below this identification confidence (default 0.8). */
   readonly minConfidence?: number;
+  /**
+   * Known products likely to appear (demo/venue inventory). When a detected object
+   * visually matches a hint, the model uses that exact name — fixes brand/model misreads
+   * ("Microsoft Surface" for an Asus Zenbook) and keeps names stable across angles,
+   * which is also what makes the client's name-based dedup merge correctly.
+   */
+  readonly hints?: readonly string[];
+}
+
+function buildPrompt(hints: readonly string[] | undefined): string {
+  if (!hints || hints.length === 0) return PROMPT;
+  return `${PROMPT}
+
+KNOWN INVENTORY HINTS: the user's items likely include: ${hints.join('; ')}.
+If a detected object plausibly matches one of these products, use that EXACT name (and a higher confidence). Only do this when the visual evidence is compatible — never force a hint onto a clearly different object.`;
 }
 
 interface RawItem {
@@ -209,14 +224,16 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function callOpenAI(imageBase64: string, config: OpenAIVisionConfig): Promise<string> {
-  const model = config.model ?? 'gpt-4.1';
+  // Fastest vision model in the family (measured ~0.9-1.3s vs 1.4s mini, 2.2-3.9s gpt-4.1);
+  // demo hints offset nano's weaker brand OCR. Override via config for cold rooms.
+  const model = config.model ?? 'gpt-4.1-nano';
   const body = {
     model,
     messages: [
       {
         role: 'user',
         content: [
-          { type: 'text', text: PROMPT },
+          { type: 'text', text: buildPrompt(config.hints) },
           {
             type: 'image_url',
             image_url: { url: toImageUrl(imageBase64), detail: 'high' },

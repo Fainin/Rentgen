@@ -33,6 +33,7 @@ export class RentgenUpsell extends LitElement {
       position: sticky;
       bottom: 0;
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 0.75rem;
@@ -46,22 +47,37 @@ export class RentgenUpsell extends LitElement {
       display: flex;
       flex-direction: column;
       color: #e5e7eb;
+      flex: 1 1 auto;
       min-width: 0;
+      overflow: hidden;
     }
     .count {
       font-size: 0.85rem;
       color: #9ca3af;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .amount {
       font-weight: 800;
       font-size: 1.1rem;
       color: var(--rentgen-accent, #86efac);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
+    /* On a phone the two buttons can't share a row with the summary — let them
+       wrap to their own full-width row and split the space instead of overlapping. */
     .actions {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      flex: none;
+      flex: 1 1 auto;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .actions button {
+      flex: 1 1 auto;
     }
     button {
       appearance: none;
