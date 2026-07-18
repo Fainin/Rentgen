@@ -6,15 +6,19 @@
  */
 
 import { useEffect, useState } from 'react';
-import { configureRentgen, on, type EnrichedItem } from '@rentgen/sdk';
+import { configureRentgen, on, preloadDetector, type EnrichedItem } from '@rentgen/sdk';
 import './app.css';
 
 // `?stub=1` forces the offline stub adapters — the recorded-fallback / no-wifi demo path.
-const stubMode = new URLSearchParams(window.location.search).has('stub');
+// `?notavily=1` keeps REAL vision but stubs the pricing (both keys are required for real
+// enrichment) — cheap detection testing without burning Tavily/reconcile tokens.
+const params = new URLSearchParams(window.location.search);
+const stubMode = params.has('stub');
+const noTavily = params.has('notavily');
 
 configureRentgen({
   openaiApiKey: stubMode ? undefined : import.meta.env.VITE_OPENAI_API_KEY,
-  tavilyApiKey: stubMode ? undefined : import.meta.env.VITE_TAVILY_API_KEY,
+  tavilyApiKey: stubMode || noTavily ? undefined : import.meta.env.VITE_TAVILY_API_KEY,
   currency: 'EUR',
   asset: {
     auth: { isAuthenticated: true, user: { id: 'demo-host-user', displayName: 'Demo' } },
@@ -151,6 +155,12 @@ export function App() {
   const [phase, setPhase] = useState<Phase>('onboarding');
   const [captured, setCaptured] = useState<readonly EnrichedItem[]>([]);
   const [pending, setPending] = useState(0);
+
+  // Warm the on-device detector (WASM + model) during onboarding, so the moment the
+  // user taps "Start scanning" the live detector is already hot.
+  useEffect(() => {
+    void preloadDetector();
+  }, []);
 
   // The client emits the full accumulated inventory on every scan:complete; scan:start
   // fires the moment a crop is captured — that drives the instant "Scanning…" ghost chip.

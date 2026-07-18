@@ -19,6 +19,14 @@ export interface Source {
   readonly url: string;
 }
 
+/** Normalized bounding box (fractions of image width/height, 0..1, top-left origin). */
+export interface BoundingBox {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+}
+
 /** One distinct sellable/rentable object identified in a photo (output of a DetectionAdapter). */
 export interface DetectedObject {
   /** Stable id for this object within a scan (used as React key / dedup key). */
@@ -29,6 +37,12 @@ export interface DetectedObject {
   readonly condition: string;
   /** Detector confidence, 0..1. */
   readonly confidence: number;
+  /**
+   * Optional location of THIS object within the scanned image — lets the client crop a
+   * per-item photo when one image contains several products. (Sanctioned registry edit,
+   * 2026-07-18: adjacent items were sharing the same card image.)
+   */
+  readonly box?: BoundingBox;
 }
 
 /** A detected object priced against live comps (output of an EnrichmentAdapter). */

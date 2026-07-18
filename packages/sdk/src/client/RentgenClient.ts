@@ -11,6 +11,7 @@ import type { EnrichedItem, ScanResult, Session } from '../types.js';
 import { emit } from '../events.js';
 import { findByImageHash, getSession, hashImage, saveSession } from '../storage/sessionStore.js';
 import { totalIdleValue } from '../results/total.js';
+import { attachItemImages } from './itemImage.js';
 
 export interface RentgenClientOptions {
   readonly detection: DetectionAdapter;
@@ -124,9 +125,12 @@ export class RentgenClient {
     const settled = await Promise.allSettled(
       objects.map((object) => this.enrichment.enrich(object)),
     );
-    const enriched = settled
+    const priced = settled
       .filter((r): r is PromiseFulfilledResult<EnrichedItem> => r.status === 'fulfilled')
-      .map((r) => ({ ...r.value, image: imageBase64 }));
+      .map((r) => r.value);
+    // Per-item photo: crop to the classifier's box when present (adjacent products must
+    // not share one card image); full scan image otherwise.
+    const enriched = await attachItemImages(priced, imageBase64);
 
     if (enriched.length === 0) {
       const firstFailure = settled.find(

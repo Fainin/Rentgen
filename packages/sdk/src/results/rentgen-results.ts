@@ -32,6 +32,8 @@ export class RentgenResults extends LitElement {
       background: var(--rentgen-card-bg, #16181d);
       border-radius: var(--rentgen-radius, 20px);
       padding: 1.25rem;
+      /* Generous bottom room so a fixed tab bar never overlays the last card/upsell. */
+      padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
     }
     .heading {
       font-size: 1.35rem;
@@ -123,13 +125,11 @@ export class RentgenResults extends LitElement {
         box-shadow 0.15s ease,
         opacity 0.15s ease;
     }
-    /* Active (selected) — accent border replaces the old checkbox. */
+    /* Active (selected) — accent border replaces the old checkbox.
+       Inactive is simply the absence of this border; no dimming. */
     .card.active {
       border-color: var(--rentgen-accent, #86efac);
       box-shadow: 0 0 0 1px var(--rentgen-accent, #86efac) inset;
-    }
-    .card.inactive {
-      opacity: 0.5;
     }
     .card.removing {
       transition:
@@ -251,6 +251,7 @@ export class RentgenResults extends LitElement {
   private dragStartY = 0;
   private dragDX = 0;
   private dragging = false;
+  private dragMoved = false;
   private dragEl: HTMLElement | null = null;
 
   constructor() {
@@ -312,6 +313,11 @@ export class RentgenResults extends LitElement {
     return this.result.items.filter((i) => !this.removed.has(i.id));
   }
 
+  /** Visible items that are still active — these drive the headline total. */
+  private get activeItems(): readonly EnrichedItem[] {
+    return this.visibleItems.filter((i) => this.selected.has(i.id));
+  }
+
   private emitSelection(): void {
     if (!this.result) return;
     emit('selection:change', {
@@ -325,6 +331,7 @@ export class RentgenResults extends LitElement {
     if (next.has(id)) next.delete(id);
     else next.add(id);
     this.selected = next;
+    this.animateTotal(totalIdleValue(this.activeItems));
     this.emitSelection();
   }
 
@@ -338,7 +345,7 @@ export class RentgenResults extends LitElement {
     nextSelected.delete(id);
     this.selected = nextSelected;
 
-    this.animateTotal(totalIdleValue(this.visibleItems));
+    this.animateTotal(totalIdleValue(this.activeItems));
     this.emitSelection();
   }
 
@@ -354,6 +361,7 @@ export class RentgenResults extends LitElement {
     this.dragStartY = e.clientY;
     this.dragDX = 0;
     this.dragging = false;
+    this.dragMoved = false;
     this.dragEl.setPointerCapture?.(e.pointerId);
   };
 
@@ -363,7 +371,9 @@ export class RentgenResults extends LitElement {
     const dy = e.clientY - this.dragStartY;
     if (!this.dragging) {
       if (Math.abs(dx) < TAP_SLOP && Math.abs(dy) < TAP_SLOP) return;
-      // A mostly-vertical move is a scroll, not a swipe — bail out of the gesture.
+      // Past the slop — this is a drag, never a tap. A mostly-vertical move is a
+      // scroll, so bail out of the gesture entirely (browser handles the scroll).
+      this.dragMoved = true;
       if (Math.abs(dx) <= Math.abs(dy)) {
         this.endDrag();
         return;
@@ -383,11 +393,13 @@ export class RentgenResults extends LitElement {
     const id = this.dragId;
     const el = this.dragEl;
     const dragged = this.dragging;
+    const moved = this.dragMoved;
     const dx = this.dragDX;
     this.endDrag();
 
     if (!dragged) {
-      this.toggle(id); // treated as a tap
+      // Only a clean press (no scroll/drag movement) toggles the active state.
+      if (!moved) this.toggle(id);
       return;
     }
     if (Math.abs(dx) > el.offsetWidth * SWIPE_DELETE_RATIO) {
@@ -400,6 +412,15 @@ export class RentgenResults extends LitElement {
       el.style.transition = 'transform 0.2s ease';
       el.style.transform = 'translateX(0)';
     }
+  };
+
+  // Pointer capture stolen (e.g. the browser starts scrolling): abort, never toggle.
+  private onPointerCancel = (): void => {
+    if (this.dragId === null || !this.dragEl) return;
+    const el = this.dragEl;
+    this.endDrag();
+    el.style.transition = 'transform 0.2s ease';
+    el.style.transform = 'translateX(0)';
   };
 
   private endDrag(): void {
@@ -439,7 +460,8 @@ export class RentgenResults extends LitElement {
     if (count === 0) {
       return html`<div class="empty">Everything cleared — scan more to find idle value.</div>`;
     }
-    const monthly = monthlyPassiveIncome(items);
+    // Total and monthly reflect only the active items, so toggling updates the sum.
+    const monthly = monthlyPassiveIncome(this.activeItems);
     return html`
       <h2 class="heading">${count} ${count === 1 ? 'item' : 'items'} found</h2>
       <p class="subheading">Tap to toggle · swipe a card left to remove it</p>
@@ -459,7 +481,7 @@ export class RentgenResults extends LitElement {
           <div class="swipe">
             <div class="delete-bg"><span>🗑 Delete</span></div>
             <div
-              class="card ${active ? 'active' : 'inactive'}"
+              class="card ${active ? 'active' : ''}"
               role="button"
               aria-pressed=${active ? 'true' : 'false'}
               aria-label="${item.name} — tap to toggle"
@@ -467,7 +489,7 @@ export class RentgenResults extends LitElement {
               @pointerdown=${(e: PointerEvent) => this.onPointerDown(e, item.id)}
               @pointermove=${this.onPointerMove}
               @pointerup=${this.onPointerUp}
-              @pointercancel=${this.onPointerUp}
+              @pointercancel=${this.onPointerCancel}
               @keydown=${(e: KeyboardEvent) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();

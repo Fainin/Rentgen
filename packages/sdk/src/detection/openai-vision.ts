@@ -4,7 +4,7 @@
  */
 
 import type { DetectionAdapter } from '../adapters/types.js';
-import type { DetectedObject } from '../types.js';
+import type { BoundingBox, DetectedObject } from '../types.js';
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
@@ -58,6 +58,8 @@ List each distinct movable object that a person could sell or rent out. For each
 
 4. "confidence" — a number 0..1 representing how certain you are that the NAME is correct (not whether something is present). If the brand/model is unreadable, use a generic name and an honestly lower confidence.
 
+5. "box" — the object's bounding box within the image as FRACTIONS of image width/height (0..1, top-left origin): x, y = top-left corner, w, h = size. Be reasonably tight around the object. If you cannot localize it, use the full image {x:0, y:0, w:1, h:1}.
+
 Skip rules — do NOT list:
 - built-in fixtures, walls, floors, ceilings, cables or chargers as standalone items, or people;
 - everyday low-value clutter with no real resale market: bottles, cups, mugs, glasses, dishes, cutlery, food and drinks, plants, decoration knick-knacks, pens, pencils, rulers, paper notebooks, office stationery;
@@ -84,8 +86,19 @@ const JSON_SCHEMA = {
             category: { type: 'string', enum: [...CATEGORIES] },
             condition: { type: 'string' },
             confidence: { type: 'number' },
+            box: {
+              type: 'object',
+              properties: {
+                x: { type: 'number' },
+                y: { type: 'number' },
+                w: { type: 'number' },
+                h: { type: 'number' },
+              },
+              required: ['x', 'y', 'w', 'h'],
+              additionalProperties: false,
+            },
           },
-          required: ['name', 'category', 'condition', 'confidence'],
+          required: ['name', 'category', 'condition', 'confidence', 'box'],
           additionalProperties: false,
         },
       },
@@ -108,6 +121,25 @@ interface RawItem {
   readonly category?: unknown;
   readonly condition?: unknown;
   readonly confidence?: unknown;
+  readonly box?: unknown;
+}
+
+/**
+ * A usable per-item box is strictly smaller than the frame — the prompt's "full image"
+ * fallback (and anything nearly that big) means the model couldn't localize, so we omit
+ * the box and the client keeps the whole scan image for that item.
+ */
+function validateBox(raw: unknown): BoundingBox | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined;
+  const b = raw as { x?: unknown; y?: unknown; w?: unknown; h?: unknown };
+  const x = clamp01(Number(b.x));
+  const y = clamp01(Number(b.y));
+  const w = clamp01(Number(b.w));
+  const h = clamp01(Number(b.h));
+  if (![x, y, w, h].every(Number.isFinite)) return undefined;
+  if (w < 0.03 || h < 0.03) return undefined; // degenerate sliver
+  if (w * h > 0.85) return undefined; // effectively the whole frame
+  return { x, y, w: Math.min(w, 1 - x), h: Math.min(h, 1 - y) };
 }
 
 const cleanString = (value: unknown, maxLen: number): string =>
@@ -146,7 +178,8 @@ function validateItem(
     return undefined;
   }
 
-  return { id: `oa-${index}`, name, category, condition, confidence };
+  const box = validateBox(raw.box);
+  return { id: `oa-${index}`, name, category, condition, confidence, ...(box ? { box } : {}) };
 }
 
 function parseResponseContent(content: string, minConfidence: number): DetectedObject[] {

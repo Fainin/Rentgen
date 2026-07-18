@@ -27,10 +27,9 @@ export interface Detector {
   close(): void;
 }
 
-// Raised from 0.25 (tuning 2026-07-18): the low threshold flooded busy scenes with
-// marginal boxes — bottles, mugs, background clutter — each burning a scan. Fewer,
-// more certain boxes demo better; the classifier's 0.8 gate culls the rest.
-const SCORE_THRESHOLD = 0.4;
+// Tuning history: 0.25 flooded busy scenes with marginal boxes; 0.4 proved too strict on
+// real pans (missed finds). 0.3 + the junk-class/area filters is the current balance.
+const SCORE_THRESHOLD = 0.3;
 const MAX_RESULTS = 10;
 const MP_VERSION = '0.10.35';
 const WASM_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/wasm`;

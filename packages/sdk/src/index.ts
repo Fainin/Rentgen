@@ -54,6 +54,6 @@ import './results/rentgen-results.js';
 import './upsell/rentgen-upsell.js';
 import './upsell/rentgen-report-card.js';
 
-export { RentgenScanner } from './capture/index.js';
+export { RentgenScanner, preloadDetector } from './capture/index.js';
 export { RentgenResults } from './results/rentgen-results.js';
 export { RentgenUpsell, RentgenReportCard } from './upsell/index.js';

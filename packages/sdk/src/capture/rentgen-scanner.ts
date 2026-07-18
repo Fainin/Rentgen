@@ -592,9 +592,10 @@ function filterDetections<
 }
 
 function formatChip(result: ScanResult, scanImage: string): string {
-  // The client returns the ACCUMULATED inventory; this object's item is the one carrying
-  // the crop we just sent (dedup may keep an older twin — then a plain check is fine).
-  const item = result.items.find((i) => i.image === scanImage);
+  // The client returns the ACCUMULATED inventory. Prefer the item carrying the exact crop
+  // we sent; with per-item sub-cropping that match can miss, so fall back to the newest
+  // item (last in the merged list) — for a single-object crop that IS this object.
+  const item = result.items.find((i) => i.image === scanImage) ?? result.items.at(-1);
   if (!item) return '✓';
   const sym = currencySymbol(result.currency);
   const min = Math.round(item.resale.min);
