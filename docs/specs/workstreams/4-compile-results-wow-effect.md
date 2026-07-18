@@ -55,6 +55,24 @@ build against it in parallel and you swap their real modules in as they land —
 - Keys stay in `apps/app` env and are passed into `configureRentgen`; the SDK never reads
   `import.meta.env`.
 
+## Agreed handoffs from Streams 1 & 2 (team-confirmed)
+
+Two compile-time duties land here (details in specs 1 & 2, "Design decisions"):
+
+1. **Semantic dedup on compile.** Stream 1's tracker gate + image hash stop most double
+   scans, but the same physical object scanned from two angles (or via a Phase-1 photo *and*
+   a Phase-2 crop) still slips through. In `RentgenClient`, merge items whose
+   `name`+`category` match (case-insensitive) before totaling — keep the higher-confidence
+   one. Stream 2's naming rules are designed to make this string-stable.
+2. **Persist the scan image as the item image.** `EnrichedItem` has no image field, but the
+   cards need a photo: the `imageBase64` passed into `scan()` *is* the item image — exactly
+   **one image per item**, ever (Phase 2: a single-object crop; a white-background cutout
+   instead if Stream 1's optional SlimSAM step is active — same field, same shape, you can't
+   tell and don't need to). Store it on the session
+   keyed to the scan's items so `<rentgen-results>` and Stream 5 can render it. If that
+   means a field on `Session`/`ScanResult`, that's your frozen-file stewardship call —
+   update the README registry when you do it.
+
 ## Steward, don't hoard (the frozen files)
 
 You *own* `types.ts`, `adapters/types.ts`, `events.ts`, `config.ts`, `index.ts` — but they
