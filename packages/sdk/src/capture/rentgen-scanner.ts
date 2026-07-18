@@ -38,6 +38,40 @@ const DETECT_INTERVAL_MS = 120; // ~8 detector fps; overlay still redraws every 
 // After this many consecutive empty inferences (~5 s) we rebuild on CPU once.
 const GPU_ZERO_STREAK_LIMIT = 40;
 
+// ---- Capture tuning (2026-07-18): fewer, better finds -------------------------------
+// COCO classes that are never worth a listing. Labels are usually junk, but for exactly
+// these everyday classes the detector is reliably right — and users were seeing bottles
+// and mugs eat scans. "person" is also a privacy line: never crop-scan a human.
+const JUNK_LABELS: ReadonlySet<string> = new Set([
+  'person',
+  'bottle',
+  'wine glass',
+  'cup',
+  'fork',
+  'knife',
+  'spoon',
+  'bowl',
+  'banana',
+  'apple',
+  'orange',
+  'broccoli',
+  'carrot',
+  'sandwich',
+  'pizza',
+  'donut',
+  'cake',
+  'potted plant',
+  'sink',
+  'toilet',
+  'refrigerator',
+  'oven',
+  'microwave',
+]);
+/** Ignore boxes smaller than this fraction of the frame — background clutter, not a find. */
+const MIN_BOX_AREA_FRAC = 0.02;
+/** At most this many crops classify/price concurrently; further confirms wait their turn. */
+const MAX_CONCURRENT_SCANS = 3;
+
 type Mode = 'tap' | 'live';
 type DetectorState = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -192,6 +226,7 @@ export class RentgenScanner extends LitElement {
   private theme: OverlayTheme = DEFAULT_THEME;
   private zeroStreak = 0;
   private cpuFallbackDone = false;
+  private inFlightScans = 0;
 
   constructor() {
     super();
@@ -391,8 +426,9 @@ export class RentgenScanner extends LitElement {
     if (!this.detector || now - this.lastDetectMs < DETECT_INTERVAL_MS) return;
     this.lastDetectMs = now;
 
-    const detections = this.detector.detect(video, now);
-    this.watchGpuHealth(detections.length);
+    const raw = this.detector.detect(video, now);
+    this.watchGpuHealth(raw.length);
+    const detections = filterDetections(raw, video.videoWidth * video.videoHeight);
     const next = updateTracker(this.trackerState, detections);
     this.trackerState = next;
     this.syncTracks(next, video);
@@ -432,6 +468,12 @@ export class RentgenScanner extends LitElement {
       this.buffers.set(track.id, buffer);
 
       if (track.status === 'confirmed') {
+        // Concurrency cap: leave the track unmarked so it retries next tick — it stays
+        // confirmed, so it naturally queues until a scan slot frees up.
+        if (this.inFlightScans >= MAX_CONCURRENT_SCANS) {
+          this.visuals.set(track.id, { state: 'tentative' });
+          continue;
+        }
         this.scannedIds.add(track.id); // at-most-once, ever
         void this.scanTrack(track.id, buffer);
       } else {
@@ -463,6 +505,7 @@ export class RentgenScanner extends LitElement {
     this.sessionHashes.push(hash);
 
     this.visuals.set(id, { state: 'scanning' });
+    this.inFlightScans++;
     emit('scan:start', {});
     try {
       const dataUrl = toDataUrl(best.canvas);
@@ -470,6 +513,8 @@ export class RentgenScanner extends LitElement {
       this.visuals.set(id, { state: 'priced', chip: formatChip(result, dataUrl) });
     } catch {
       this.visuals.set(id, { state: 'failed' }); // client already emitted scan:error
+    } finally {
+      this.inFlightScans--;
     }
   }
 
@@ -532,6 +577,18 @@ export class RentgenScanner extends LitElement {
           </div>`}
     `;
   }
+}
+
+/** Capture-tuning gate: drop junk classes and background-sized boxes before tracking. */
+function filterDetections<
+  T extends { readonly box: { readonly w: number; readonly h: number }; readonly label: string },
+>(detections: readonly T[], frameArea: number): readonly T[] {
+  if (frameArea <= 0) return detections;
+  return detections.filter(
+    (d) =>
+      !JUNK_LABELS.has(d.label.toLowerCase()) &&
+      (d.box.w * d.box.h) / frameArea >= MIN_BOX_AREA_FRAC,
+  );
 }
 
 function formatChip(result: ScanResult, scanImage: string): string {

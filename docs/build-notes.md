@@ -49,6 +49,19 @@ keys after the event; they are demo-scoped and embedded in the browser bundle by
 `scan:error` by RentgenClient. Don't add a second `scan:start` in the client — widgets
 would double-react.
 
+## Detection tuned for listing quality (2026-07-18 ~17:10)
+"Too many things at once, especially bottles." Three-layer fix:
+1. **Detector (capture):** score threshold 0.25 → 0.4, max results 20 → 10, boxes under
+   2% of the frame ignored, and a COCO junk-class denylist (bottle, cup, dishes, food,
+   plants, appliances — and `person`, as a privacy line) filtered before tracking.
+2. **Scan gate:** max 3 crops classify/price concurrently; further confirmed tracks wait
+   (they stay confirmed and retry next tick — a natural queue).
+3. **Classifier:** min confidence 0.3 → 0.8 (configurable: `detectionMinConfidence`),
+   plus prompt rules — only ≥80%-sure items, skip low-value clutter (bottles/cups/
+   stationery/food/deco) and anything clearly under ~€15 resale.
+Verified: the desk photo that yielded 4–6 objects incl. pencil/ruler junk now returns
+exactly "Apple MacBook Pro" (0.98); the live pipeline still captures real objects.
+
 ## Vision models upgraded: gpt-4o → gpt-4.1, reconcile → gpt-4.1-mini
 gpt-4o (2024) read crops too weakly. gpt-4.1 (default, config-overridable string) names
 crops specifically ("Apple wireless keyboard", "black hardcover notebook") AND is faster

@@ -11,11 +11,17 @@ export interface DetectionConfig {
   readonly openaiApiKey?: string;
   /** OpenAI vision model, e.g. 'gpt-4.1' (default), 'gpt-4.1-mini', 'gpt-4o'. */
   readonly model?: string;
+  /** Listing-quality gate: drop items below this identification confidence (default 0.8). */
+  readonly minConfidence?: number;
 }
 
 export function createDetectionAdapter(config: DetectionConfig): DetectionAdapter {
   if (config.openaiApiKey) {
-    return createOpenAIVisionAdapter({ openaiApiKey: config.openaiApiKey, model: config.model });
+    return createOpenAIVisionAdapter({
+      openaiApiKey: config.openaiApiKey,
+      model: config.model,
+      minConfidence: config.minConfidence,
+    });
   }
   return createStubDetectionAdapter();
 }

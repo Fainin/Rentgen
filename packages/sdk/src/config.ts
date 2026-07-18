@@ -18,6 +18,8 @@ export interface RentgenConfig {
   readonly currency?: string;
   /** Vision model override for the detection adapter (default 'gpt-4.1'). */
   readonly detectionModel?: string;
+  /** Listing-quality gate: drop detected items below this confidence (default 0.8). */
+  readonly detectionMinConfidence?: number;
   /**
    * Opaque Stream-5 config blob ({ auth, providers, uploader, actions, callbacks }).
    * Forwarded UNTOUCHED to createAssetAdapter — Stream 4 never reads or reshapes it.
@@ -38,7 +40,11 @@ export function configureRentgen(config: RentgenConfig): RentgenClient {
   const currency = config.currency ?? 'EUR';
   const detection =
     config.adapters?.detection ??
-    createDetectionAdapter({ openaiApiKey: config.openaiApiKey, model: config.detectionModel });
+    createDetectionAdapter({
+      openaiApiKey: config.openaiApiKey,
+      model: config.detectionModel,
+      minConfidence: config.detectionMinConfidence,
+    });
   const enrichment =
     config.adapters?.enrichment ??
     createEnrichmentAdapter({

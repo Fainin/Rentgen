@@ -25,7 +25,12 @@ export const CATEGORIES = [
 
 const CATEGORY_SET: ReadonlySet<string> = new Set(CATEGORIES);
 
-const MIN_CONFIDENCE = 0.3;
+/**
+ * Listing-quality gate: only items the model is at least this sure about survive.
+ * Product decision (2026-07-18): listings focus on high-certainty finds — a missed item
+ * beats a junk card. Overridable via the factory config's minConfidence.
+ */
+const DEFAULT_MIN_CONFIDENCE = 0.8;
 const MAX_ITEMS = 12;
 const NAME_MAX_LEN = 80;
 const CONDITION_MAX_LEN = 60;
@@ -51,7 +56,12 @@ List each distinct movable object that a person could sell or rent out. For each
 
 4. "confidence" — a number 0..1 representing how certain you are that the NAME is correct (not whether something is present). If the brand/model is unreadable, use a generic name and an honestly lower confidence.
 
-Skip rules — do NOT list: built-in fixtures, walls, floors, ceilings, cables or chargers as standalone items, or people.
+Skip rules — do NOT list:
+- built-in fixtures, walls, floors, ceilings, cables or chargers as standalone items, or people;
+- everyday low-value clutter with no real resale market: bottles, cups, mugs, glasses, dishes, cutlery, food and drinks, plants, decoration knick-knacks, pens, pencils, rulers, paper notebooks, office stationery;
+- anything whose realistic used resale value is clearly under about €15.
+
+Only include an object if you are at least 80% sure what it is (confidence ≥ 0.8). If you are less sure than that, omit it entirely — a missed item is better than a wrong listing.
 
 List each distinct physical object once. An empty list is a valid and correct answer if nothing sellable/rentable is visible.
 
@@ -87,6 +97,8 @@ interface OpenAIVisionConfig {
   readonly openaiApiKey: string;
   /** e.g. 'gpt-4.1' (default), 'gpt-4.1-mini', 'gpt-4o'. */
   readonly model?: string;
+  /** Drop items below this identification confidence (default 0.8). */
+  readonly minConfidence?: number;
 }
 
 interface RawItem {
@@ -108,7 +120,11 @@ function toImageUrl(imageBase64: string): string {
   return imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`;
 }
 
-function validateItem(raw: RawItem, index: number): DetectedObject | undefined {
+function validateItem(
+  raw: RawItem,
+  index: number,
+  minConfidence: number,
+): DetectedObject | undefined {
   const name = cleanString(raw.name, NAME_MAX_LEN);
   if (!name) {
     console.warn(`[openai-vision] dropping item ${index}: missing/empty name`);
@@ -123,15 +139,15 @@ function validateItem(raw: RawItem, index: number): DetectedObject | undefined {
   const rawConfidence = typeof raw.confidence === 'number' ? raw.confidence : Number(raw.confidence);
   const confidence = clamp01(Number.isFinite(rawConfidence) ? rawConfidence : 0);
 
-  if (confidence < MIN_CONFIDENCE) {
-    console.warn(`[openai-vision] dropping "${name}": confidence ${confidence} below ${MIN_CONFIDENCE}`);
+  if (confidence < minConfidence) {
+    console.warn(`[openai-vision] dropping "${name}": confidence ${confidence} below ${minConfidence}`);
     return undefined;
   }
 
   return { id: `oa-${index}`, name, category, condition, confidence };
 }
 
-function parseResponseContent(content: string): DetectedObject[] {
+function parseResponseContent(content: string, minConfidence: number): DetectedObject[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(content);
@@ -147,7 +163,7 @@ function parseResponseContent(content: string): DetectedObject[] {
   const validated: DetectedObject[] = [];
   for (const raw of items) {
     if (validated.length >= MAX_ITEMS) break;
-    const item = validateItem((raw ?? {}) as RawItem, validated.length);
+    const item = validateItem((raw ?? {}) as RawItem, validated.length, minConfidence);
     if (item) validated.push(item);
   }
   return validated;
@@ -226,10 +242,11 @@ async function callOpenAI(imageBase64: string, config: OpenAIVisionConfig): Prom
 }
 
 export function createOpenAIVisionAdapter(config: OpenAIVisionConfig): DetectionAdapter {
+  const minConfidence = config.minConfidence ?? DEFAULT_MIN_CONFIDENCE;
   return {
     async detect(imageBase64: string): Promise<DetectedObject[]> {
       const content = await callOpenAI(imageBase64, config);
-      return parseResponseContent(content);
+      return parseResponseContent(content, minConfidence);
     },
   };
 }
