@@ -1,17 +1,25 @@
 /**
  * <rentgen-results> (Stream 4) — the money shot. Dark card, idle-capital-first hero,
- * per-item cards (photo, rent/day, resale, sources, confidence chip, selection checkbox),
- * animated count-up total, and a bottom slot for Stream 5's <rentgen-upsell> action bar.
+ * per-item cards (photo, rent/day, resale, sources, confidence chip). Tap a card to
+ * toggle its active state (accent border); swipe it left to delete it from the tally.
+ * Animated count-up total, and a bottom slot for Stream 5's <rentgen-upsell> action bar.
  *
  * Renders purely from bus events (`scan:start|complete|error`); emits `selection:change`.
  */
 
 import { css, html, LitElement, nothing } from 'lit';
-import type { ScanResult } from '../types.js';
+import type { EnrichedItem, ScanResult } from '../types.js';
 import { emit, on } from '../events.js';
 import { formatMoney, formatRange } from './format.js';
 import { monthlyPassiveIncome } from './earnings.js';
-import { midpoint } from './total.js';
+import { midpoint, totalIdleValue } from './total.js';
+
+// A leftward drag past this fraction of the card width commits the delete.
+const SWIPE_DELETE_RATIO = 0.4;
+// Movement (px) before a pointer drag counts as a swipe rather than a tap.
+const TAP_SLOP = 8;
+// Card slide-out animation before the row is actually removed from state.
+const DELETE_ANIM_MS = 180;
 
 export class RentgenResults extends LitElement {
   static styles = css`
@@ -72,7 +80,34 @@ export class RentgenResults extends LitElement {
       font-size: 0.92rem;
       margin-top: 0.2rem;
     }
+    /* Swipe row: the red delete affordance sits behind the sliding card. */
+    .swipe {
+      position: relative;
+      border-radius: var(--rentgen-radius, 16px);
+      overflow: hidden;
+      margin-bottom: 0.65rem;
+      touch-action: pan-y;
+    }
+    .delete-bg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.4rem;
+      padding: 0 1.3rem;
+      background: #7f1d1d;
+      color: #fecaca;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    .delete-bg.armed {
+      background: #dc2626;
+      color: #fff;
+    }
     .card {
+      position: relative;
+      z-index: 1;
       display: flex;
       align-items: center;
       gap: 0.8rem;
@@ -80,29 +115,28 @@ export class RentgenResults extends LitElement {
       border: 1px solid #262a32;
       border-radius: var(--rentgen-radius, 16px);
       padding: 0.75rem 0.9rem;
-      margin-bottom: 0.65rem;
-    }
-    .card.unchecked {
-      opacity: 0.45;
-    }
-    .check {
-      flex: none;
-      width: 1.6rem;
-      height: 1.6rem;
-      border-radius: 0.5rem;
-      border: 2px solid #3a4150;
-      background: transparent;
-      color: #05230f;
       cursor: pointer;
-      display: grid;
-      place-items: center;
-      font-weight: 800;
-      font-size: 1rem;
-      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        opacity 0.15s ease;
     }
-    .check.on {
-      background: var(--rentgen-accent, #86efac);
+    /* Active (selected) — accent border replaces the old checkbox. */
+    .card.active {
       border-color: var(--rentgen-accent, #86efac);
+      box-shadow: 0 0 0 1px var(--rentgen-accent, #86efac) inset;
+    }
+    .card.inactive {
+      opacity: 0.5;
+    }
+    .card.removing {
+      transition:
+        transform 0.18s ease,
+        opacity 0.18s ease;
+      transform: translateX(-100%);
+      opacity: 0;
     }
     .thumb {
       flex: none;
@@ -192,6 +226,7 @@ export class RentgenResults extends LitElement {
 
   declare private result: ScanResult | null;
   declare private selected: ReadonlySet<string>;
+  declare private removed: ReadonlySet<string>;
   declare private scanning: boolean;
   declare private error: string;
   declare private displayTotal: number;
@@ -200,6 +235,7 @@ export class RentgenResults extends LitElement {
     return {
       result: { state: true },
       selected: { state: true },
+      removed: { state: true },
       scanning: { state: true },
       error: { state: true },
       displayTotal: { state: true },
@@ -209,10 +245,19 @@ export class RentgenResults extends LitElement {
   private unsubscribes: Array<() => void> = [];
   private animationFrame = 0;
 
+  // Transient swipe-drag bookkeeping (not reactive — the dragged card is styled directly).
+  private dragId: string | null = null;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private dragDX = 0;
+  private dragging = false;
+  private dragEl: HTMLElement | null = null;
+
   constructor() {
     super();
     this.result = null;
     this.selected = new Set();
+    this.removed = new Set();
     this.scanning = false;
     this.error = '';
     this.displayTotal = 0;
@@ -230,6 +275,7 @@ export class RentgenResults extends LitElement {
         this.error = '';
         this.result = result;
         this.selected = new Set(result.items.map((i) => i.id));
+        this.removed = new Set();
         this.animateTotal(result.totalIdleValue);
         this.emitSelection();
       }),
@@ -261,11 +307,16 @@ export class RentgenResults extends LitElement {
     this.animationFrame = requestAnimationFrame(tick);
   }
 
+  private get visibleItems(): readonly EnrichedItem[] {
+    if (!this.result) return [];
+    return this.result.items.filter((i) => !this.removed.has(i.id));
+  }
+
   private emitSelection(): void {
     if (!this.result) return;
     emit('selection:change', {
       sessionId: this.result.sessionId,
-      selectedItemIds: [...this.selected],
+      selectedItemIds: [...this.selected].filter((id) => !this.removed.has(id)),
     });
   }
 
@@ -275,6 +326,92 @@ export class RentgenResults extends LitElement {
     else next.add(id);
     this.selected = next;
     this.emitSelection();
+  }
+
+  /** Drop an item entirely: gone from the list, the total, and the selection. */
+  private deleteItem(id: string): void {
+    const nextRemoved = new Set(this.removed);
+    nextRemoved.add(id);
+    this.removed = nextRemoved;
+
+    const nextSelected = new Set(this.selected);
+    nextSelected.delete(id);
+    this.selected = nextSelected;
+
+    this.animateTotal(totalIdleValue(this.visibleItems));
+    this.emitSelection();
+  }
+
+  // --- Swipe-to-delete / tap-to-toggle pointer handling ---------------------
+
+  private onPointerDown = (e: PointerEvent, id: string): void => {
+    // Let source links behave normally; never start a drag/toggle from them.
+    if ((e.target as HTMLElement).closest('a')) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    this.dragId = id;
+    this.dragEl = e.currentTarget as HTMLElement;
+    this.dragStartX = e.clientX;
+    this.dragStartY = e.clientY;
+    this.dragDX = 0;
+    this.dragging = false;
+    this.dragEl.setPointerCapture?.(e.pointerId);
+  };
+
+  private onPointerMove = (e: PointerEvent): void => {
+    if (this.dragId === null || !this.dragEl) return;
+    const dx = e.clientX - this.dragStartX;
+    const dy = e.clientY - this.dragStartY;
+    if (!this.dragging) {
+      if (Math.abs(dx) < TAP_SLOP && Math.abs(dy) < TAP_SLOP) return;
+      // A mostly-vertical move is a scroll, not a swipe — bail out of the gesture.
+      if (Math.abs(dx) <= Math.abs(dy)) {
+        this.endDrag();
+        return;
+      }
+      this.dragging = true;
+      this.dragEl.style.transition = 'none';
+    }
+    e.preventDefault();
+    this.dragDX = Math.min(0, dx); // left swipes only
+    this.dragEl.style.transform = `translateX(${this.dragDX}px)`;
+    const armed = Math.abs(this.dragDX) > this.dragEl.offsetWidth * SWIPE_DELETE_RATIO;
+    this.deleteBgFor(this.dragEl)?.classList.toggle('armed', armed);
+  };
+
+  private onPointerUp = (): void => {
+    if (this.dragId === null || !this.dragEl) return;
+    const id = this.dragId;
+    const el = this.dragEl;
+    const dragged = this.dragging;
+    const dx = this.dragDX;
+    this.endDrag();
+
+    if (!dragged) {
+      this.toggle(id); // treated as a tap
+      return;
+    }
+    if (Math.abs(dx) > el.offsetWidth * SWIPE_DELETE_RATIO) {
+      // Play the slide-out, then commit the removal to state.
+      el.classList.add('removing');
+      el.style.transition = '';
+      el.style.transform = '';
+      window.setTimeout(() => this.deleteItem(id), DELETE_ANIM_MS);
+    } else {
+      el.style.transition = 'transform 0.2s ease';
+      el.style.transform = 'translateX(0)';
+    }
+  };
+
+  private endDrag(): void {
+    this.deleteBgFor(this.dragEl)?.classList.remove('armed');
+    this.dragId = null;
+    this.dragEl = null;
+    this.dragging = false;
+    this.dragDX = 0;
+  }
+
+  private deleteBgFor(card: HTMLElement | null): Element | null | undefined {
+    return card?.parentElement?.querySelector('.delete-bg');
   }
 
   render() {
@@ -297,11 +434,15 @@ export class RentgenResults extends LitElement {
   }
 
   private renderResult(result: ScanResult) {
-    const monthly = monthlyPassiveIncome(result.items);
-    const count = result.items.length;
+    const items = this.visibleItems;
+    const count = items.length;
+    if (count === 0) {
+      return html`<div class="empty">Everything cleared — scan more to find idle value.</div>`;
+    }
+    const monthly = monthlyPassiveIncome(items);
     return html`
       <h2 class="heading">${count} ${count === 1 ? 'item' : 'items'} found</h2>
-      <p class="subheading">Uncheck anything you'll keep</p>
+      <p class="subheading">Tap to toggle · swipe a card left to remove it</p>
       <div class="hero">
         <div class="label">
           <span>Sitting idle, earning €0</span>
@@ -312,36 +453,48 @@ export class RentgenResults extends LitElement {
           ~${formatMoney(monthly, result.currency)}/month passive if you rent it out
         </div>
       </div>
-      ${result.items.map((item) => {
-        const checked = this.selected.has(item.id);
+      ${items.map((item) => {
+        const active = this.selected.has(item.id);
         return html`
-          <div class="card ${checked ? '' : 'unchecked'}">
-            <button
-              class="check ${checked ? 'on' : ''}"
-              @click=${() => this.toggle(item.id)}
-              aria-label="Select ${item.name}"
+          <div class="swipe">
+            <div class="delete-bg"><span>🗑 Delete</span></div>
+            <div
+              class="card ${active ? 'active' : 'inactive'}"
+              role="button"
+              aria-pressed=${active ? 'true' : 'false'}
+              aria-label="${item.name} — tap to toggle"
+              tabindex="0"
+              @pointerdown=${(e: PointerEvent) => this.onPointerDown(e, item.id)}
+              @pointermove=${this.onPointerMove}
+              @pointerup=${this.onPointerUp}
+              @pointercancel=${this.onPointerUp}
+              @keydown=${(e: KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  this.toggle(item.id);
+                }
+              }}
             >
-              ${checked ? '✓' : ''}
-            </button>
-            ${item.image
-              ? html`<img class="thumb" src=${item.image} alt=${item.name} />`
-              : html`<div class="thumb placeholder">photo</div>`}
-            <div class="info">
-              <div class="name">${item.name}</div>
-              <div class="meta">${item.category} · ${item.condition}</div>
-              <span class="chip">${Math.round(item.confidence * 100)}% sure</span>
-              <div class="sources">
-                ${item.sources.slice(0, 2).map(
-                  (s) => html`<a href=${s.url} target="_blank" rel="noreferrer">${s.title}</a>`,
-                )}
+              ${item.image
+                ? html`<img class="thumb" src=${item.image} alt=${item.name} />`
+                : html`<div class="thumb placeholder">photo</div>`}
+              <div class="info">
+                <div class="name">${item.name}</div>
+                <div class="meta">${item.category} · ${item.condition}</div>
+                <span class="chip">${Math.round(item.confidence * 100)}% sure</span>
+                <div class="sources">
+                  ${item.sources.slice(0, 2).map(
+                    (s) => html`<a href=${s.url} target="_blank" rel="noreferrer">${s.title}</a>`,
+                  )}
+                </div>
               </div>
-            </div>
-            <div class="prices">
-              <div class="rent">
-                ${formatRange(item.rentPerDay.min, item.rentPerDay.max, item.rentPerDay.currency)}/day
-              </div>
-              <div class="resale">
-                ~${formatMoney(midpoint(item.resale), item.resale.currency)} resale
+              <div class="prices">
+                <div class="rent">
+                  ${formatRange(item.rentPerDay.min, item.rentPerDay.max, item.rentPerDay.currency)}/day
+                </div>
+                <div class="resale">
+                  ~${formatMoney(midpoint(item.resale), item.resale.currency)} resale
+                </div>
               </div>
             </div>
           </div>
