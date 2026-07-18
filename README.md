@@ -1,18 +1,13 @@
 # Rentgen
 
-> **Point your phone at your stuff → an agent identifies each item, prices its resale +
-> rent/day against live web comps → an idle-capital total adds up.**
+> **Point your phone at your stuff → an agent identifies each item, prices its resale + rent/day against live web comps → an idle-capital total adds up.**
 > Ends on: *"You're sitting on €4,200 doing nothing."* 🎤
 
-**Rentgen** reads as German *Röntgen* (X-ray — sees through your stuff) and as "rent-gen".
-Built for the {Tech: Europe} × Almedia Hackathon, Berlin.
+**Rentgen** reads as German *Röntgen* (X-ray — sees through your stuff) and as "rent-gen". Built for the {Tech: Europe} × Almedia Hackathon, Berlin.
 
-SDK-first, fully client-side, **zero backend**. The value chain ships as a reusable
-package (`@rentgen/sdk`); a thin React app (`apps/app`) just launches it.
+SDK-first, fully client-side, **zero backend**. The value chain ships as a reusable package (`@rentgen/sdk`); a thin React app (`apps/app`) just launches it.
 
-> **STATUS: bare scaffold.** Monorepo, tooling, docs, and the locked SDK **contracts**
-> (`packages/sdk/src/types.ts`, `adapters/types.ts`) are in place. The implementation —
-> adapters, client, widgets, app wiring — is what the team builds. See `CLAUDE.md`.
+> **STATUS: bare scaffold.** Monorepo, tooling, docs, and the locked SDK **contracts** (`packages/sdk/src/types.ts`, `adapters/types.ts`) are in place. The implementation — adapters, client, widgets, app wiring — is what the team builds. See `CLAUDE.md`.
 
 ## Quickstart
 
@@ -22,8 +17,7 @@ npm run dev          # boots the app shell on http://localhost:5173
 npm run typecheck    # type-checks both workspaces
 ```
 
-Right now the app is just a headline shell — start filling in `packages/sdk` against the
-contracts, then mount the widgets in `apps/app`.
+Right now the app is just a headline shell — start filling in `packages/sdk` against the contracts, then mount the widgets in `apps/app`.
 
 ### API keys (when you wire up the real adapters)
 
@@ -58,8 +52,7 @@ CLAUDE.md       instructions for Claude Code working in this repo
 ## Where to read next
 
 - **[`docs/`](docs/README.md)** — the design, demo script, build order, team split.
-- **[`packages/sdk/README.md`](packages/sdk/README.md)** — how to embed the widgets and
-  write adapters.
+- **[`packages/sdk/README.md`](packages/sdk/README.md)** — how to embed the widgets and write adapters.
 
 ## Build order (phases are a firewall)
 
