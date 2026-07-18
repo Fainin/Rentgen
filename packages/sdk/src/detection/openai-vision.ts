@@ -32,7 +32,7 @@ const CONDITION_MAX_LEN = 60;
 const MAX_RETRIES = 1;
 const RETRY_DELAY_MS = 1500;
 const REQUEST_TIMEOUT_MS = 45_000;
-const MAX_TOKENS = 500;
+const MAX_TOKENS = 1000;
 const TEMPERATURE = 0.2;
 
 const PROMPT = `You are an expert at identifying distinct sellable/rentable objects in a photo for a peer-to-peer marketplace.
@@ -85,7 +85,8 @@ const JSON_SCHEMA = {
 
 interface OpenAIVisionConfig {
   readonly openaiApiKey: string;
-  readonly model?: 'gpt-4o' | 'gpt-4o-mini';
+  /** e.g. 'gpt-4.1' (default), 'gpt-4.1-mini', 'gpt-4o'. */
+  readonly model?: string;
 }
 
 interface RawItem {
@@ -157,7 +158,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function callOpenAI(imageBase64: string, config: OpenAIVisionConfig): Promise<string> {
-  const model = config.model ?? 'gpt-4o';
+  const model = config.model ?? 'gpt-4.1';
   const body = {
     model,
     messages: [
@@ -167,7 +168,7 @@ async function callOpenAI(imageBase64: string, config: OpenAIVisionConfig): Prom
           { type: 'text', text: PROMPT },
           {
             type: 'image_url',
-            image_url: { url: toImageUrl(imageBase64), detail: 'auto' },
+            image_url: { url: toImageUrl(imageBase64), detail: 'high' },
           },
         ],
       },

@@ -14,7 +14,7 @@ import type { DetectedObject, EnrichedItem, PriceRange, Source } from '../types.
 
 const TAVILY_SEARCH_URL = 'https://api.tavily.com/search';
 const OPENAI_CHAT_URL = 'https://api.openai.com/v1/chat/completions';
-const OPENAI_MODEL = 'gpt-4o-mini';
+const OPENAI_MODEL = 'gpt-4.1-mini';
 
 const TAVILY_TIMEOUT_MS = 15_000;
 const OPENAI_TIMEOUT_MS = 30_000;

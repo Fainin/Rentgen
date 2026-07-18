@@ -35,7 +35,8 @@ in it, each with a name, category, condition, and confidence. You use OpenAI vis
 
 ```ts
 // detection/index.ts
-export function createDetectionAdapter(config: { openaiApiKey?: string; model?: 'gpt-4o' | 'gpt-4o-mini' }): DetectionAdapter
+export function createDetectionAdapter(config: { openaiApiKey?: string; model?: string }): DetectionAdapter
+// model default: 'gpt-4.1' (upgraded from gpt-4o mid-hackathon — better crop reading, faster)
 ```
 
 Return type is the frozen `DetectionAdapter`. Stream 4 wires this into `configureRentgen`

@@ -243,6 +243,17 @@
   display: block;
 }
 
+.chip.ghost {
+  border-style: dashed;
+  border-color: rgba(134, 239, 172, 0.35);
+  color: #9ca3af;
+  animation: ghost-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes ghost-pulse {
+  50% { opacity: 0.45; }
+}
+
 .chip-row .hint {
   color: #6b7280;
   font-size: 0.88rem;

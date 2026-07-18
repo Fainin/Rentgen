@@ -79,18 +79,30 @@ function Onboarding({ onStart }: { onStart: () => void }) {
 
 function ScanStage({
   captured,
+  pending,
   onStop,
 }: {
   captured: readonly EnrichedItem[];
+  pending: number;
   onStop: () => void;
 }) {
   const n = captured.length;
+  const pillText =
+    pending > 0
+      ? n === 0
+        ? 'Analyzing first find…'
+        : `${n} captured · ${pending} analyzing…`
+      : n === 0
+        ? 'Looking for gadgets…'
+        : `${n} gadget${n === 1 ? '' : 's'} captured`;
+  // Newest finds first, so a fresh capture is always visible without scrolling.
+  const newestFirst = [...captured].reverse();
   return (
     <div className="scan-stage">
       <rentgen-scanner immersive />
       <div className="scan-pill">
         <span className="dot" />
-        {n === 0 ? 'Looking for gadgets…' : `${n} gadget${n === 1 ? '' : 's'} captured`}
+        {pillText}
       </div>
       <div className="scan-dock">
         <div className="capture-card">
@@ -102,10 +114,16 @@ function ScanStage({
             </span>
           </div>
           <div className="chip-row">
-            {n === 0 ? (
+            {Array.from({ length: pending }, (_, i) => (
+              <span className="chip ghost" key={`pending-${i}`}>
+                <span className="icon">✨</span>
+                Scanning…
+              </span>
+            ))}
+            {n === 0 && pending === 0 ? (
               <span className="hint">Point the camera at anything worth money.</span>
             ) : (
-              captured.map((item) => (
+              newestFirst.map((item) => (
                 <span className="chip" key={item.id}>
                   <span className="icon">
                     {item.image ? (
@@ -132,9 +150,21 @@ function ScanStage({
 export function App() {
   const [phase, setPhase] = useState<Phase>('onboarding');
   const [captured, setCaptured] = useState<readonly EnrichedItem[]>([]);
+  const [pending, setPending] = useState(0);
 
-  // The client emits the full accumulated inventory on every scan:complete.
-  useEffect(() => on('scan:complete', (result) => setCaptured(result.items)), []);
+  // The client emits the full accumulated inventory on every scan:complete; scan:start
+  // fires the moment a crop is captured — that drives the instant "Scanning…" ghost chip.
+  useEffect(() => {
+    const offs = [
+      on('scan:start', () => setPending((p) => p + 1)),
+      on('scan:complete', (result) => {
+        setCaptured(result.items);
+        setPending((p) => Math.max(0, p - 1));
+      }),
+      on('scan:error', () => setPending((p) => Math.max(0, p - 1))),
+    ];
+    return () => offs.forEach((off) => off());
+  }, []);
 
   return (
     <>
@@ -157,7 +187,7 @@ export function App() {
       </main>
       {phase === 'onboarding' && <Onboarding onStart={() => setPhase('scanning')} />}
       {phase === 'scanning' && (
-        <ScanStage captured={captured} onStop={() => setPhase('review')} />
+        <ScanStage captured={captured} pending={pending} onStop={() => setPhase('review')} />
       )}
     </>
   );

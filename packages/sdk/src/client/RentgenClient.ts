@@ -21,17 +21,37 @@ export interface RentgenClientOptions {
 /**
  * Semantic dedup at compile time (team handoff #1): the tracker gate + image hash stop
  * most double scans, but the same physical object scanned from two angles still slips
- * through. Merge items whose name+category match (case-insensitive), keep the
- * higher-confidence one.
+ * through. Merge on the NAME alone (case-insensitive) — the classifier's specificity
+ * ladder makes identical name strings mean the same product, while its category can
+ * wobble between scans ("Other" vs "Home & Kitchen"), which used to leave duplicates.
+ * Keep the higher-confidence one.
  */
 function dedupItems(items: readonly EnrichedItem[]): readonly EnrichedItem[] {
   const byKey = new Map<string, EnrichedItem>();
   for (const item of items) {
-    const key = `${item.name.toLowerCase()}|${item.category.toLowerCase()}`;
+    const key = item.name.trim().toLowerCase();
     const existing = byKey.get(key);
     if (!existing || item.confidence > existing.confidence) byKey.set(key, item);
   }
   return [...byKey.values()];
+}
+
+/**
+ * Adapter ids restart per call (oa-0, oa-1, …), so accumulated scans collide. Remap new
+ * items to ids unused in the current inventory — unique ids are what selection, React
+ * keys, and the export's sourceItemId all assume.
+ */
+function withUniqueIds(
+  existing: readonly EnrichedItem[],
+  incoming: readonly EnrichedItem[],
+): readonly EnrichedItem[] {
+  const used = new Set(existing.map((i) => i.id));
+  return incoming.map((item) => {
+    let id = item.id;
+    for (let n = 1; used.has(id); n++) id = `${item.id}-${n}`;
+    used.add(id);
+    return id === item.id ? item : { ...item, id };
+  });
 }
 
 export class RentgenClient {
@@ -76,7 +96,10 @@ export class RentgenClient {
   /** Merge new items into the running inventory, persist, emit, return. */
   private compile(newItems: readonly EnrichedItem[], imageHash: string): ScanResult {
     if (!this.currentSessionId) this.currentSessionId = crypto.randomUUID();
-    const items = dedupItems([...this.currentItems, ...newItems]);
+    const items = dedupItems([
+      ...this.currentItems,
+      ...withUniqueIds(this.currentItems, newItems),
+    ]);
     this.currentItems = items;
     const result: ScanResult = {
       sessionId: this.currentSessionId,

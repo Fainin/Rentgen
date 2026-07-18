@@ -9,7 +9,8 @@ import { createStubDetectionAdapter } from './stub.js';
 
 export interface DetectionConfig {
   readonly openaiApiKey?: string;
-  readonly model?: 'gpt-4o' | 'gpt-4o-mini';
+  /** OpenAI vision model, e.g. 'gpt-4.1' (default), 'gpt-4.1-mini', 'gpt-4o'. */
+  readonly model?: string;
 }
 
 export function createDetectionAdapter(config: DetectionConfig): DetectionAdapter {

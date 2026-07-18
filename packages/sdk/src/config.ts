@@ -16,8 +16,8 @@ export interface RentgenConfig {
   readonly openaiApiKey?: string;
   readonly tavilyApiKey?: string;
   readonly currency?: string;
-  /** Vision model override for the detection adapter. */
-  readonly detectionModel?: 'gpt-4o' | 'gpt-4o-mini';
+  /** Vision model override for the detection adapter (default 'gpt-4.1'). */
+  readonly detectionModel?: string;
   /**
    * Opaque Stream-5 config blob ({ auth, providers, uploader, actions, callbacks }).
    * Forwarded UNTOUCHED to createAssetAdapter — Stream 4 never reads or reshapes it.

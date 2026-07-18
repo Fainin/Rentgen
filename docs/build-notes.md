@@ -49,6 +49,27 @@ keys after the event; they are demo-scoped and embedded in the browser bundle by
 `scan:error` by RentgenClient. Don't add a second `scan:start` in the client — widgets
 would double-react.
 
+## Vision models upgraded: gpt-4o → gpt-4.1, reconcile → gpt-4.1-mini
+gpt-4o (2024) read crops too weakly. gpt-4.1 (default, config-overridable string) names
+crops specifically ("Apple wireless keyboard", "black hardcover notebook") AND is faster
+(~2.2s vs 3–6s); reconcile on gpt-4.1-mini (~1.4s). detail:"high" on crops, max_tokens
+1000 (500 truncated strict-JSON on 12-item scenes). Both verified against the live API
+with our exact strict-schema request before deploying.
+
+## Accumulation bugs found by the richer model (fixed in RentgenClient)
+1. Adapter ids restart per call (oa-0, oa-1…) → collisions across accumulated scans →
+   broken React keys (14 chips for 8 items) + selection toggling the wrong items. Fix:
+   `withUniqueIds` remaps incoming ids against the inventory before merging.
+2. Dedup keyed on name+category left duplicates when the category wobbled between scans
+   ("Other" vs "Home & Kitchen" for the same ruler). Dedup now keys on the exact name
+   alone (case-insensitive) — the specificity ladder makes identical names safe to merge;
+   fuzzy/substring merging rejected ("iPhone 13" ⊂ "iPhone 13 Pro" would wrongly merge).
+
+## Live dock feedback: ghost chips on scan:start
+The dock shows a pulsing "Scanning…" ghost chip the moment a crop is captured
+(scan:start), replaced by the named chip on scan:complete; newest finds render first.
+No contract change — pending = starts − completes − errors, counted in the app.
+
 ## Grounding hazards found live (enrichment)
 Two real failure modes surfaced in live testing, both now handled in `tavily-comps.ts`:
 1. **Name collision:** "Sony a7 III" matched *Audi A7* eBay listings. Fix: category added
