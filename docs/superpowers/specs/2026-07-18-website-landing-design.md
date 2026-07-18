@@ -1,6 +1,19 @@
 # Rentgen marketing landing page — design
 
-**Status:** approved, ready for implementation plan
+> **Design revision (2026-07-18, post-implementation):** the hero was rebuilt to match Kevin's
+> Claude Design file (`claude.ai/design` project `b951febd-d261-4521-bab4-18530f672271`,
+> `Rentgen Landing.dc.html`), which supersedes this spec's hero section. Key changes: the
+> draggable scan line was replaced by an **auto-looping horizontal scan beam** (6.5s sweep +
+> 2.6s hold) over a **full-bleed fixed grid of 36 item cards** (Lucide icons, resale + rent/day
+> in EUR) that light up as the beam passes; a glass "Total value in view" card shows a lerped
+> count-up plus a rental-income chip; typography moved to **Outfit**, accent to `#86efac` on
+> `#0b0c0f`. The five content sections below remain, re-themed as glass panels. Two spec
+> decisions were re-affirmed against the design file: the trust line was adapted to the honest
+> "nothing stored · no account · zero backend" (design's "no uploads · runs entirely in your
+> browser" overstated privacy), and currency stayed EUR (design used USD). Reduced motion:
+> the loop is skipped and the grid renders fully lit with final totals, static.
+
+**Status:** implemented (hero superseded by the design revision above)
 **Owner:** new `apps/website` workspace (not part of the existing 5-workstream split — fully decoupled, no dependency on `@rentgen/sdk`)
 **Worktree:** `.claude/worktrees/website-design` (branch `worktree-website-design`)
 

@@ -1,47 +1,68 @@
-import { useCallback, useState } from 'react';
-import { XrayReveal } from '../hero/XrayReveal';
-import { RoomIllustration } from '../hero/RoomIllustration';
-import { ItemMarker } from '../hero/ItemMarker';
-import { MoneyCounter } from '../hero/MoneyCounter';
-import { useAutoSweep } from '../hero/useAutoSweep';
-import { REVEAL_ITEMS } from '../hero/items';
+import { ItemGrid } from '../hero/ItemGrid';
+import { TotalCard } from '../hero/TotalCard';
+import { useScanLoop } from '../hero/useScanLoop';
+
+const NOISE_URI =
+  "url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22140%22 height=%22140%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.85%22 numOctaves=%222%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E')";
 
 export function Hero() {
-  const [reveal, setReveal] = useState(0);
-  const cancelSweep = useAutoSweep(setReveal);
-  const handleRevealChange = useCallback(
-    (value: number) => {
-      cancelSweep();
-      setReveal(value);
-    },
-    [cancelSweep],
-  );
+  const scan = useScanLoop();
 
   return (
-    <section className="hero" aria-label="Rentgen interactive demo">
-      <div className="hero__copy">
-        <h1 className="hero__headline">Your room is worth more than you think.</h1>
-        <p className="hero__subhead">Drag the line. Watch dead capital turn into cash.</p>
-        <a className="hero__cta" href="#sdk">
+    <>
+      <div className="xray-field" aria-hidden="true">
+        <div className="xray-field__glow" />
+        <ItemGrid litCount={scan.litCount} />
+        <div className="xray-field__scrim" />
+        <div
+          className="scan-beam"
+          style={{ top: `${(scan.progress * 100).toFixed(2)}%`, opacity: scan.beamOn ? 1 : 0 }}
+        />
+        <div className="grit" style={{ backgroundImage: NOISE_URI }} />
+      </div>
+
+      <header className="site-header">
+        <div className="site-header__brand">
+          <span className="site-header__wordmark">RENTGEN</span>
+          <span className="site-header__tag">röntgen · rent-gen</span>
+        </div>
+        <a className="btn btn--ghost" href="#sdk">
           Try the scan
         </a>
-      </div>
-      <div className="hero__stage">
-        <MoneyCounter reveal={reveal} />
-        <XrayReveal
-          reveal={reveal}
-          onRevealChange={handleRevealChange}
-          beforeContent={<RoomIllustration variant="before" />}
-          afterContent={
-            <>
-              <RoomIllustration variant="after" />
-              {REVEAL_ITEMS.map((item) => (
-                <ItemMarker key={item.id} item={item} revealed={reveal >= item.x} />
-              ))}
-            </>
-          }
-        />
-      </div>
-    </section>
+      </header>
+
+      <main className="hero" aria-label="Rentgen — X-ray your room">
+        <TotalCard total={scan.total} rentTotal={scan.rentTotal} />
+
+        <h1 className="hero__headline">
+          X-ray your room.
+          <br />
+          <span className="hero__headline-sub">See the money you forgot you owned.</span>
+        </h1>
+
+        <p className="hero__body">
+          Point your phone and pan across the room. Rentgen&rsquo;s AI identifies every object in view and
+          prices it live against web comps — what it sells for today, and what it earns per day as a
+          rental. Your clutter becomes a balance sheet.
+        </p>
+
+        <div className="hero__ctas">
+          <a className="btn btn--primary" href="#sdk">
+            Scan my room
+          </a>
+          <a className="btn btn--ghost" href="#how">
+            See how it works
+          </a>
+        </div>
+
+        <div className="hero__trust">
+          <span>nothing stored</span>
+          <span>·</span>
+          <span>no account</span>
+          <span>·</span>
+          <span>zero backend</span>
+        </div>
+      </main>
+    </>
   );
 }

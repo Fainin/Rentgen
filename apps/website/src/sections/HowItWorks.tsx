@@ -20,7 +20,7 @@ const STEPS: Step[] = [
 
 export function HowItWorks() {
   return (
-    <section className="section how-it-works" aria-labelledby="how-it-works-heading">
+    <section className="section how-it-works" id="how" aria-labelledby="how-it-works-heading">
       <h2 id="how-it-works-heading">Scan. Identify. Price.</h2>
       <ol className="how-it-works__steps">
         {STEPS.map((step, index) => (
