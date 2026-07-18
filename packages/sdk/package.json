@@ -1,0 +1,38 @@
+{
+  "name": "@rentgen/sdk",
+  "version": "0.1.0",
+  "description": "Rentgen's reusable value chain (detect → enrich → price → total) + drop-in <rentgen-scanner> / <rentgen-results> widgets. Framework-agnostic, client-side.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": [
+    "./src/index.ts",
+    "./src/widgets/*.ts",
+    "./dist/*"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "development": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lit": "^3.2.1"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  }
+}

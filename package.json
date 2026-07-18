@@ -1,0 +1,21 @@
+{
+  "name": "rentgen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Point your phone at your stuff; an agent prices its resale + rent-per-day value and adds up your idle capital. SDK-first, client-side, zero backend.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w app",
+    "build": "npm run build -w @rentgen/sdk && npm run build -w app",
+    "build:sdk": "npm run build -w @rentgen/sdk",
+    "typecheck": "npm run typecheck -w @rentgen/sdk && npm run typecheck -w app"
+  }
+}
