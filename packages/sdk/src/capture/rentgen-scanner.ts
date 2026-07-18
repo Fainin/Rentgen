@@ -33,11 +33,14 @@ import { drawOverlay, type OverlayTheme, type VisualState } from './overlay.js';
 
 const MAX_SIDE = 1280;
 const JPEG_QUALITY = 0.85;
-// ---- Frame-batch mode (the krempel pattern) -----------------------------------------
-// Sample a full keyframe on a timer during the pan; ONE model call analyzes them all at
-// stop. No on-device detector involved.
+// ---- Frame-batch mode (the krempel pattern, pipelined) ------------------------------
+// Sample a full keyframe on a timer during the pan and stream them to the model in
+// rolling chunks — items resolve WHILE filming, so stop only waits for the last chunk.
+// Filming is capped at MAX_FRAMES * FRAME_INTERVAL_MS = 15 s; a `rentgen-timeup` event
+// tells the host to run its stop flow.
 const FRAME_INTERVAL_MS = 1500;
-const MAX_FRAMES = 12;
+const MAX_FRAMES = 10;
+const FRAMES_PER_CHUNK = 3;
 const FRAME_JPEG_QUALITY = 0.8;
 const DETECT_INTERVAL_MS = 120; // ~8 detector fps; overlay still redraws every frame.
 // A GPU delegate can initialize fine yet read blank frames forever (zero detections).
@@ -240,8 +243,11 @@ export class RentgenScanner extends LitElement {
   private zeroStreak = 0;
   private cpuFallbackDone = false;
   private inFlightScans = 0;
-  private frameStore: string[] = [];
+  private pendingChunk: string[] = [];
+  private chunkPromises: Promise<void>[] = [];
+  private totalFrames = 0;
   private frameTimer = 0;
+  private timeupFired = false;
 
   constructor() {
     super();
@@ -366,7 +372,10 @@ export class RentgenScanner extends LitElement {
 
   private startFrameSampling(): void {
     if (this.frameTimer) return;
-    this.frameStore = [];
+    this.pendingChunk = [];
+    this.chunkPromises = [];
+    this.totalFrames = 0;
+    this.timeupFired = false;
     this.frameTimer = window.setInterval(() => this.sampleFrame(), FRAME_INTERVAL_MS);
   }
 
@@ -376,7 +385,7 @@ export class RentgenScanner extends LitElement {
   }
 
   private sampleFrame(): void {
-    if (this.frameStore.length >= MAX_FRAMES) return;
+    if (this.totalFrames >= MAX_FRAMES) return;
     const video = this.video;
     if (!video || video.videoWidth === 0) return;
     const scale = Math.min(1, MAX_SIDE / Math.max(video.videoWidth, video.videoHeight));
@@ -384,34 +393,56 @@ export class RentgenScanner extends LitElement {
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
     canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
-    this.frameStore = [...this.frameStore, canvas.toDataURL('image/jpeg', FRAME_JPEG_QUALITY)];
+    this.totalFrames++;
+    this.pendingChunk = [...this.pendingChunk, canvas.toDataURL('image/jpeg', FRAME_JPEG_QUALITY)];
     this.dispatchEvent(
       new CustomEvent('rentgen-frames', {
-        detail: { count: this.frameStore.length },
+        detail: { count: this.totalFrames, max: MAX_FRAMES },
         bubbles: true,
         composed: true,
       }),
     );
+    // Pipelining: ship every full chunk immediately — items resolve while filming.
+    if (this.pendingChunk.length >= FRAMES_PER_CHUNK) this.flushChunk();
+    if (this.totalFrames >= MAX_FRAMES && !this.timeupFired) {
+      // 15 s filming budget reached — sampling ends; the host runs its stop flow.
+      this.timeupFired = true;
+      this.stopFrameSampling();
+      this.dispatchEvent(
+        new CustomEvent('rentgen-timeup', { bubbles: true, composed: true }),
+      );
+    }
+  }
+
+  /** Send the frames gathered so far as one scanFrames() chunk (fire-and-track). */
+  private flushChunk(): void {
+    const chunk = this.pendingChunk;
+    this.pendingChunk = [];
+    if (chunk.length === 0) return;
+    emit('scan:start', {});
+    this.chunkPromises = [
+      ...this.chunkPromises,
+      getClient()
+        .scanFrames(chunk)
+        .then(() => undefined)
+        .catch(() => undefined /* client already emitted scan:error */),
+    ];
   }
 
   /**
    * Frame-batch finale (host-triggered): grab one last frame of whatever the camera
-   * points at now, then send ALL sampled keyframes in one scanFrames() call. The client
-   * emits scan:complete / scan:error; we only emit scan:start (the event contract).
+   * points at now, flush the remaining chunk, then wait for EVERY in-flight chunk —
+   * most already resolved during filming, so this usually only waits for the tail.
    */
   async finishFrames(): Promise<void> {
     this.stopFrameSampling();
     this.sampleFrame();
-    const frames = this.frameStore;
-    this.frameStore = [];
-    if (frames.length === 0) return;
+    this.flushChunk();
     this.busy = true;
-    emit('scan:start', {});
     try {
-      await getClient().scanFrames(frames);
-    } catch {
-      /* client already emitted scan:error */
+      await Promise.allSettled(this.chunkPromises);
     } finally {
+      this.chunkPromises = [];
       this.busy = false;
     }
   }

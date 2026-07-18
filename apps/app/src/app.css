@@ -320,3 +320,18 @@
   padding: 0.55rem 1rem;
   border-radius: 999px;
 }
+
+/* 15 s filming budget — fills as frames are sampled (1 frame / 1.5 s, smoothed). */
+.scan-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+  margin: 0.6rem 0 0.2rem;
+}
+.scan-progress .bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--rentgen-accent, #86efac);
+  transition: width 1.5s linear;
+}

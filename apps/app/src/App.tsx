@@ -94,22 +94,34 @@ function Onboarding({ onStart }: { onStart: () => void }) {
   );
 }
 
+const MAX_SCAN_FRAMES = 10; // mirrors the scanner's 15 s cap (10 frames · 1.5 s)
+
 function ScanStage({
   captured,
   frameCount,
+  pending,
   analyzing,
   onStop,
 }: {
   captured: readonly EnrichedItem[];
   frameCount: number;
+  pending: number;
   analyzing: boolean;
   onStop: () => void;
 }) {
+  // The scanner ends filming at the 15 s budget itself — run the same stop flow then.
+  useEffect(() => {
+    const onTimeup = () => onStop();
+    window.addEventListener('rentgen-timeup', onTimeup);
+    return () => window.removeEventListener('rentgen-timeup', onTimeup);
+  }, [onStop]);
+
   const n = captured.length;
+  const secondsLeft = Math.max(0, Math.round((MAX_SCAN_FRAMES - frameCount) * 1.5));
   const pillText = analyzing
-    ? `Analyzing ${frameCount} frame${frameCount === 1 ? '' : 's'}…`
+    ? 'Finishing up…'
     : frameCount > 0
-      ? `Filming · ${frameCount} frame${frameCount === 1 ? '' : 's'} captured`
+      ? `Filming · ${secondsLeft}s left`
       : 'Filming… pan slowly across your things';
   // Newest finds first, so a fresh capture is always visible without scrolling.
   const newestFirst = [...captured].reverse();
@@ -123,20 +135,26 @@ function ScanStage({
       <div className="scan-dock">
         <div className="capture-card">
           <div className="head">
-            <span className="title">{analyzing ? 'Analyzing' : 'Captured'}</span>
-            <span className="count">{analyzing ? frameCount : n}</span>
-            <span className={`state ${n > 0 || analyzing ? 'live' : ''}`}>
-              {analyzing ? '✨ pricing finds' : n > 0 ? '✓ priced' : 'Pan slowly'}
+            <span className="title">Captured</span>
+            <span className="count">{n}</span>
+            <span className={`state ${n > 0 || pending > 0 ? 'live' : ''}`}>
+              {analyzing ? '✨ finishing' : n > 0 ? '✓ priced live' : 'Pan slowly'}
             </span>
           </div>
+          <div className="scan-progress">
+            <div
+              className="bar"
+              style={{ width: `${Math.min(100, (frameCount / MAX_SCAN_FRAMES) * 100)}%` }}
+            />
+          </div>
           <div className="chip-row">
-            {analyzing ? (
-              <span className="chip ghost">
+            {Array.from({ length: pending }, (_, i) => (
+              <span className="chip ghost" key={`pending-${i}`}>
                 <span className="icon">✨</span>
-                Identifying &amp; pricing…
+                Identifying…
               </span>
-            ) : null}
-            {n === 0 && !analyzing ? (
+            ))}
+            {n === 0 && pending === 0 ? (
               <span className="hint">Film everything worth money, then stop.</span>
             ) : (
               newestFirst.map((item) => (
@@ -167,30 +185,24 @@ export function App() {
   const [phase, setPhase] = useState<Phase>('onboarding');
   const [captured, setCaptured] = useState<readonly EnrichedItem[]>([]);
   const [frameCount, setFrameCount] = useState(0);
+  const [pending, setPending] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
-  const analyzingRef = useRef(false);
+  const stoppingRef = useRef(false);
 
-  // Frame-batch flow: the scanner samples keyframes while filming (bubbling
-  // `rentgen-frames` events carry the count); "Stop & review" sends them all in ONE
-  // model call, and scan:complete flips to the review screen.
+  // Pipelined frame flow: the scanner streams keyframe chunks to the model WHILE
+  // filming — scan:start/complete drive the live ghost/named chips — and finishFrames()
+  // resolves once every chunk is in, so stop usually only waits for the tail chunk.
   useEffect(() => {
     const onFrames = (event: Event) =>
       setFrameCount((event as CustomEvent<{ count: number }>).detail.count);
     window.addEventListener('rentgen-frames', onFrames);
     const offs = [
+      on('scan:start', () => setPending((p) => p + 1)),
       on('scan:complete', (result) => {
         setCaptured(result.items);
-        if (analyzingRef.current) {
-          analyzingRef.current = false;
-          setAnalyzing(false);
-          setPhase('review');
-        }
+        setPending((p) => Math.max(0, p - 1));
       }),
-      on('scan:error', () => {
-        // Stay in the scan stage so the user can just press stop again.
-        analyzingRef.current = false;
-        setAnalyzing(false);
-      }),
+      on('scan:error', () => setPending((p) => Math.max(0, p - 1))),
     ];
     return () => {
       window.removeEventListener('rentgen-frames', onFrames);
@@ -198,14 +210,21 @@ export function App() {
     };
   }, []);
 
-  const onStop = () => {
+  const onStop = async () => {
+    if (stoppingRef.current) return; // stop button and 15 s time-up can race
     const scanner = document.querySelector('rentgen-scanner') as
       | (HTMLElement & { finishFrames(): Promise<void> })
       | null;
     if (!scanner) return;
-    analyzingRef.current = true;
+    stoppingRef.current = true;
     setAnalyzing(true);
-    void scanner.finishFrames();
+    try {
+      await scanner.finishFrames();
+    } finally {
+      stoppingRef.current = false;
+      setAnalyzing(false);
+      setPhase('review');
+    }
   };
 
   return (
@@ -238,6 +257,7 @@ export function App() {
         <ScanStage
           captured={captured}
           frameCount={frameCount}
+          pending={pending}
           analyzing={analyzing}
           onStop={onStop}
         />

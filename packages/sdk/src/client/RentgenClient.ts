@@ -117,7 +117,11 @@ export class RentgenClient {
       throw new Error('The configured detection adapter does not support frame batches.');
     }
 
-    const objects = await this.detection.detectBatch(framesBase64);
+    const detected = await this.detection.detectBatch(framesBase64);
+    // Rolling chunks re-see objects from earlier chunks; the name-dedup would drop them
+    // after enrichment anyway, so skip the (slow, paid) enrichment for known names.
+    const knownNames = new Set(this.currentItems.map((i) => i.name.trim().toLowerCase()));
+    const objects = detected.filter((o) => !knownNames.has(o.name.trim().toLowerCase()));
     if (objects.length === 0) return this.compile([], imageHash);
 
     const settled = await Promise.allSettled(

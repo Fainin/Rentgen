@@ -15,6 +15,17 @@ Seam edits (additive): `DetectionAdapter.detectBatch?`, `DetectedObject.frameInd
 scanner `frames` attribute + bubbling `rentgen-frames` count event, `RentgenClient.scanFrames`.
 The old live/tap modes still work; the app now runs frames mode.
 
+## Frames mode v2: pipelined chunks + 15 s cap (2026-07-18 ~19:00)
+Frames stream to Gemini in rolling 3-frame chunks WHILE filming (scan:start/complete
+drive live ghost/named chips), so "Stop & review" only waits for the tail chunk instead
+of the whole batch. Filming caps at 10 frames · 1.5 s = 15 s — the scanner fires a
+bubbling `rentgen-timeup` and the app runs its normal stop flow; a progress bar
+(width per frame, `transition: width 1.5s linear`) shows the budget. Cost guard:
+RentgenClient.scanFrames skips enrichment for detected names already in the inventory
+(chunks re-see earlier objects constantly; name-dedup would drop them anyway).
+Testing gotcha: wmux eval round-trips are ~1–2 s, so "N frames in 5 s" timing reads are
+misleading — use an in-page recorder (setInterval into a window array) for UI timelines.
+
 ## Tavily browser CORS: WORKS — no fallback needed
 Smoke-tested 2026-07-18 (before any enrichment polish, per design §9): OPTIONS preflight
 from `Origin: http://localhost:5173` → 200 with `access-control-allow-origin` echoed;
