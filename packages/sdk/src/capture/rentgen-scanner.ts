@@ -131,6 +131,11 @@ export class RentgenScanner extends LitElement {
     input[type='file'] {
       display: none;
     }
+    .retry-row {
+      display: flex;
+      justify-content: center;
+      padding-top: 0.9rem;
+    }
     /* Immersive mode: the host app owns the chrome; we own the full-bleed video. */
     :host([immersive]) {
       height: 100%;
@@ -216,12 +221,21 @@ export class RentgenScanner extends LitElement {
   }
 
   private async startCamera(): Promise<void> {
+    // In-app browsers (links opened from chat apps) usually ship NO getUserMedia at all —
+    // say so clearly instead of failing cryptically (proven pattern from the prototype).
+    if (!navigator.mediaDevices?.getUserMedia) {
+      this.cameraError = window.isSecureContext
+        ? 'This browser has no camera support — that usually means an in-app browser. Open this page directly in Safari or Chrome.'
+        : 'Camera needs HTTPS (or localhost). Open the https:// link directly.';
+      return;
+    }
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1920 } },
         audio: false,
       });
       this.cameraReady = true;
+      this.cameraError = '';
       await this.updateComplete;
       const video = this.video;
       if (video && this.stream) {
@@ -230,11 +244,20 @@ export class RentgenScanner extends LitElement {
       }
       if (this.immersive) void this.startLive();
     } catch (error: unknown) {
+      const name = error instanceof Error ? error.name : 'UnknownError';
+      console.error('[rentgen-scanner] getUserMedia failed:', error);
       this.cameraError =
-        error instanceof Error && error.name === 'NotAllowedError'
-          ? 'Camera blocked — needs HTTPS or localhost. Use the photo upload instead.'
-          : 'Camera unavailable. Use the photo upload instead.';
+        name === 'NotAllowedError'
+          ? 'Camera permission denied (NotAllowedError) — allow camera access for this site in your browser settings, then retry.'
+          : name === 'NotFoundError'
+            ? 'No camera found on this device (NotFoundError) — use the photo upload instead.'
+            : `Camera unavailable (${name}) — retry, or use the photo upload instead.`;
     }
+  }
+
+  private onRetryCamera(): void {
+    this.cameraError = '';
+    void this.startCamera();
   }
 
   // ---- Phase 1: tap-to-capture -------------------------------------------------
@@ -465,7 +488,14 @@ export class RentgenScanner extends LitElement {
                 ${live ? 'Stop live' : '🎥 Live scan'}
               </button>
             </div>`
-        : html`<div class="fallback">${this.cameraError || 'Starting camera…'}</div>`}
+        : html`<div class="fallback">
+            ${this.cameraError || 'Starting camera…'}
+            ${this.cameraError
+              ? html`<div class="retry-row">
+                  <button class="capture" @click=${this.onRetryCamera}>Enable camera</button>
+                </div>`
+              : ''}
+          </div>`}
       ${this.immersive && this.cameraReady
         ? ''
         : html`<div class="fallback">

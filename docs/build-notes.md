@@ -96,7 +96,19 @@ emitted before they connect. The app keeps the review tree always mounted
 Count-up animations look "stuck" when sampled via eval right after events — they
 complete once frames are produced. Test-environment quirk only; real browsers are fine.
 
-## sideEffects in packages/sdk/package.json
-Was `false`; widget self-registration would be tree-shaken out of production app builds.
-Now an allowlist (`rentgen-*.ts`, `index.ts`, `dist/**`). If a widget ever "disappears"
-in a build, check this first.
+## sideEffects tree-shaking SHIPPED as a real bug — "camera not working"
+The production build dropped `<rentgen-scanner>` entirely: the root barrel re-exported it
+through `capture/index.ts`, which wasn't on the sideEffects allowlist, so Rollup treated
+the barrel as pure, saw the class binding unused, and pruned the whole chain —
+`customElements.define` never ran, the element sat inert, and getUserMedia was never
+called ("not even asking for permissions"). Dev mode doesn't tree-shake, so localhost lied.
+Fixes (both): the root barrel now side-effect-imports every `rentgen-*.ts` widget file
+directly, AND the allowlist includes `./src/**/index.ts`. Detection signal: the
+`vision_bundle` (MediaPipe) chunk appears in the build output only when the scanner made
+it in. Lesson: smoke-test the PRODUCTION bundle (`vite preview`), not just dev.
+
+## Camera error UX (ported from krempel main.ts)
+Upfront `navigator.mediaDevices?.getUserMedia` existence check (in-app browsers ship
+without it) with an explicit "open in Safari/Chrome" message; real error NAMES surfaced
+(NotAllowedError → settings hint, NotFoundError → no device); `console.error` of the raw
+error; gesture-bound "Enable camera" retry button; photo upload always available.

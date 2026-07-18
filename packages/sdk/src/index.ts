@@ -46,7 +46,14 @@ export type {
   UserRef,
 } from './upsell/index.js';
 
-// Widgets — imported for their registration side effect (and exported for typing)
+// Widgets — explicit side-effect imports so registration survives production
+// tree-shaking (a bare re-export chain through a pure barrel gets dropped when the
+// class binding is unused; this exact bug shipped once — see build-notes).
+import './capture/rentgen-scanner.js';
+import './results/rentgen-results.js';
+import './upsell/rentgen-upsell.js';
+import './upsell/rentgen-report-card.js';
+
 export { RentgenScanner } from './capture/index.js';
 export { RentgenResults } from './results/rentgen-results.js';
 export { RentgenUpsell, RentgenReportCard } from './upsell/index.js';
