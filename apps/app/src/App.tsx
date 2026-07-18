@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { configureRentgen, on, type EnrichedItem } from '@rentgen/sdk';
+import { moneyBurst, pling } from './celebrate.js';
 import './app.css';
 
 // `?stub=1` forces the offline stub adapters — the recorded-fallback / no-wifi demo path.
@@ -216,6 +217,11 @@ export function App() {
       on('scan:start', () => setPending((p) => p + 1)),
       on('scan:detected', ({ objects }) => {
         setDetectedPending((d) => d + 1);
+        // Discovery moment: pling + money flying up from the bottom.
+        if (objects.length > 0) {
+          pling();
+          moneyBurst(Math.min(24, 8 + objects.length * 4));
+        }
         setProvisional((prev) => {
           const have = new Set(prev.map((p) => p.name.toLowerCase()));
           const fresh = objects.filter((o) => !have.has(o.name.toLowerCase()));
