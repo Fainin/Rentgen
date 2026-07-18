@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="112" fill="#0b0c0f"/>
+  <rect x="1" y="1" width="510" height="510" rx="111" stroke="#1f2430" stroke-width="2"/>
+  <!-- viewfinder corner brackets -->
+  <g stroke="#86efac" stroke-width="18" stroke-linecap="round" fill="none">
+    <path d="M132 176 v-28 a16 16 0 0 1 16 -16 h28"/>
+    <path d="M380 176 v-28 a16 16 0 0 0 -16 -16 h-28"/>
+    <path d="M132 336 v28 a16 16 0 0 0 16 16 h28"/>
+    <path d="M380 336 v28 a16 16 0 0 1 -16 16 h-28"/>
+  </g>
+  <!-- stylized R -->
+  <text x="256" y="256" font-family="Outfit, system-ui, sans-serif" font-size="196" font-weight="800"
+        fill="#86efac" text-anchor="middle" dominant-baseline="central">R</text>
+</svg>
