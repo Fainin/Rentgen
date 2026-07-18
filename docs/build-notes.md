@@ -2,6 +2,19 @@
 
 One lesson per entry. Update entries instead of duplicating; delete ones that prove wrong.
 
+## Detection pivot: Gemini frame-batch beats detector+crops (2026-07-18 ~18:45, SHIPPED)
+The MediaPipe→crop→classify pipeline underperformed because EfficientDet only knows 80
+COCO classes — a DJI Osmo or smart glasses often never got a box, so they were never even
+classified. Pivoted to the krempel pattern: sample a full keyframe every 1.5 s (max 12)
+while filming, send ALL frames in ONE `gemini-flash-latest` call; the model dedupes the
+same object across frames itself and returns `bestFrameIndex` + `box` per item for card
+crops. E2E on the demo video: exactly the 4 target products by exact hint name, no junk.
+Gotchas: latest Flash **thinks by default** — a 1.8 s call became a 60 s timeout until
+`thinkingConfig: { thinkingBudget: 0 }`; `gemini-flash-lite-latest` is the faster dial.
+Seam edits (additive): `DetectionAdapter.detectBatch?`, `DetectedObject.frameIndex?`,
+scanner `frames` attribute + bubbling `rentgen-frames` count event, `RentgenClient.scanFrames`.
+The old live/tap modes still work; the app now runs frames mode.
+
 ## Tavily browser CORS: WORKS — no fallback needed
 Smoke-tested 2026-07-18 (before any enrichment polish, per design §9): OPTIONS preflight
 from `Origin: http://localhost:5173` → 200 with `access-control-allow-origin` echoed;
