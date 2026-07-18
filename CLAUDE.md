@@ -64,11 +64,35 @@ npm run build          # SDK (tsup → dist) + app
 - **API keys are in the browser bundle** — a deliberate, demo-scoped trade-off. Rotate after the event. For a shipped product, move `adapters/*` behind a thin server; the rest is unchanged.
 - **No automated tests** — deliberate hackathon scope cut. Smoke-test on real venue objects; keep a recorded fallback video.
 
-## Team split (parallel from hour 1, against the stub)
+## Team split — 5 parallel workstreams
 
-1. **App/UI** — `apps/app` layout, capture, cards, total.
-2. **Vision adapter** — `openai-vision.ts` (multi-object identify).
-3. **Pricing adapter** — `tavily-comps.ts` (comps → reconcile → grounded price).
-4. **Glue/polish** — total logic, demo prep. *(Merge into 2/3 if only 3 people.)*
+The team builds five independent sub-projects, each owning a **disjoint** folder so we merge
+with (near) zero conflicts. Full per-owner specs live in
+[`docs/specs/workstreams/`](docs/specs/workstreams/README.md) — **read the workstreams
+README + your own stream's spec before writing code.**
 
-Build the `stub` adapters first so the app runs end-to-end offline — then nobody is blocked while the real OpenAI/Tavily adapters land behind the same interfaces.
+| # | Workstream | Owns | Exposes |
+|---|------------|------|---------|
+| 1 | Object detection from video stream | `packages/sdk/src/capture/**` | `<rentgen-scanner>` |
+| 2 | Object classification "What is this?" | `packages/sdk/src/detection/**` | `createDetectionAdapter()` |
+| 3 | Product live research + population | `packages/sdk/src/enrichment/**` | `createEnrichmentAdapter()` |
+| 4 | Compile Results with "wow effect" | `client/**`, `config.ts`, `storage/**`, `results/**`, `events.ts`, `index.ts`, `apps/app/**` | `RentgenClient`, `configureRentgen`, `<rentgen-results>` — **integration hub** |
+| 5 | Upselling the results | `packages/sdk/src/upsell/**` | `createAssetAdapter()`, `<rentgen-upsell>` |
+
+Build the `stub` for your seam first so the app runs end-to-end offline — then nobody is
+blocked while the real modules land behind the same frozen interfaces.
+
+## 🚧 Scope discipline (ALWAYS enforce when working inside a workstream)
+
+When a task would require any of these, **do not do it silently** — pause and tell the
+developer it's a **shared feature**, name the **owning workstream/teammate**, and say what
+needs agreeing before diverging:
+
+- editing a **frozen contract** — `packages/sdk/src/types.ts`, `adapters/types.ts`,
+  `events.ts`, or the seam registry in the workstreams README;
+- adding/renaming a **shared event, custom-element tag, factory signature, or CSS variable**;
+- changing the **shape of data** handed off between streams;
+- editing **another workstream's files**.
+
+Then proceed only on the parts fully inside the current stream's folder. A short teammate
+message is cheaper than untangling a merge. This rule overrides "just get it done."
