@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#eceef2;font-family:'Figtree',system-ui,sans-serif}
+  .dv-turn{padding:44px 48px 36px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+  .dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 26px}
+  .dv-tid{font:700 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+  .dv-tname{font:700 14px/1.2 'Figtree',sans-serif;color:#1a1a1a}
+  .dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+  .dv-opt{flex:none;display:flex;flex-direction:column;gap:12px;scroll-margin-top:16px}
+  .dv-oid{font:700 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+  .dv-olabel{display:flex;align-items:baseline;gap:9px;font:500 12px/1.35 'Figtree',sans-serif;color:rgba(0,0,0,.55);max-width:390px}
+  .dv-opt:target .dv-oid{background:#3b6ef5;color:#fff}
+  .dv-next{margin:26px 0 0;font:500 12.5px/1.6 'Figtree',sans-serif;color:rgba(0,0,0,.5)}
+  .phone{position:relative;width:390px;height:788px;border-radius:44px;overflow:hidden;border:1px solid rgba(0,0,0,.1);box-shadow:0 20px 50px -28px rgba(0,0,0,.35)}
+</style>
+</helmet>
+<section class="dv-turn" id="t1">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Results screen — leading with the money</span></div>
+  <div class="dv-opts">
+
+    <!-- 1a value-forward light -->
+    <div class="dv-opt" id="1a">
+      <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Value-forward light — a big earnings hero up top, each card leads with the weekly rent. Same clean flat system, just re-prioritised around what users make.</div>
+      <div class="phone" style="background:#fff">
+        <div style="padding:60px 22px 0;display:flex;align-items:center;gap:13px">
+          <div style="width:38px;height:38px;border-radius:11px;border:1px solid rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+          <div style="font-size:15px;font-weight:600;color:#71717a">3 gadgets found</div>
+        </div>
+        <div style="margin:18px 22px 0;background:#3b6ef5;border-radius:24px;padding:22px 22px 20px;color:#fff">
+          <div style="font-size:13px;font-weight:600;opacity:.8;letter-spacing:.02em">These gadgets are worth</div>
+          <div style="font-size:44px;font-weight:900;letter-spacing:-.03em;margin-top:4px;line-height:1">€2,810</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:16px;background:rgba(255,255,255,.16);border-radius:12px;padding:11px 14px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg>
+            <div style="font-size:14px;font-weight:600">Or earn <span style="font-weight:800">€197/week</span> renting them out</div>
+          </div>
+        </div>
+        <div style="padding:18px 18px 0;display:flex;flex-direction:column;gap:11px">
+          <div style="border:1px solid rgba(0,0,0,.09);border-radius:18px;padding:15px;display:flex;gap:13px;align-items:center">
+            <div style="flex:none;width:48px;height:48px;border-radius:13px;background:#f4f5f7;display:flex;align-items:center;justify-content:center;color:#3b6ef5"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 20h20"/></svg></div>
+            <div style="flex:1;min-width:0"><div style="font-size:15.5px;font-weight:700;color:#18181b">MacBook Pro 14"</div><div style="font-size:12.5px;color:#71717a;font-weight:500;margin-top:2px">M3 · 512GB · Space Black</div></div>
+            <div style="text-align:right"><div style="font-size:19px;font-weight:800;color:#3b6ef5;letter-spacing:-.02em">€95<span style="font-size:12px;font-weight:600;color:#9db6f5">/wk</span></div><div style="font-size:12px;color:#a1a1aa;font-weight:600;margin-top:1px">€1,450 resale</div></div>
+          </div>
+          <div style="border:1px solid rgba(0,0,0,.09);border-radius:18px;padding:15px;display:flex;gap:13px;align-items:center">
+            <div style="flex:none;width:48px;height:48px;border-radius:13px;background:#f4f5f7;display:flex;align-items:center;justify-content:center;color:#3b6ef5"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="12" rx="2.5"/><path d="M8 7l1.5-2.5h5L16 7"/><circle cx="12" cy="13" r="3.2"/></svg></div>
+            <div style="flex:1;min-width:0"><div style="font-size:15.5px;font-weight:700;color:#18181b">Sony α7 III</div><div style="font-size:12.5px;color:#71717a;font-weight:500;margin-top:2px">Mirrorless · Body only · Black</div></div>
+            <div style="text-align:right"><div style="font-size:19px;font-weight:800;color:#3b6ef5;letter-spacing:-.02em">€70<span style="font-size:12px;font-weight:600;color:#9db6f5">/wk</span></div><div style="font-size:12px;color:#a1a1aa;font-weight:600;margin-top:1px">€980 resale</div></div>
+          </div>
+          <div style="border:1px solid rgba(0,0,0,.09);border-radius:18px;padding:15px;display:flex;gap:13px;align-items:center">
+            <div style="flex:none;width:48px;height:48px;border-radius:13px;background:#f4f5f7;display:flex;align-items:center;justify-content:center;color:#3b6ef5"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11.5" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg></div>
+            <div style="flex:1;min-width:0"><div style="font-size:15.5px;font-weight:700;color:#18181b">PlayStation 5</div><div style="font-size:12.5px;color:#71717a;font-weight:500;margin-top:2px">Slim · 1TB · White</div></div>
+            <div style="text-align:right"><div style="font-size:19px;font-weight:800;color:#3b6ef5;letter-spacing:-.02em">€32<span style="font-size:12px;font-weight:600;color:#9db6f5">/wk</span></div><div style="font-size:12px;color:#a1a1aa;font-weight:600;margin-top:1px">€380 resale</div></div>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:14px 18px 34px;border-top:1px solid rgba(0,0,0,.06);background:#fff"><div style="width:100%;height:56px;border-radius:16px;background:#3b6ef5;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center">List all 3 gadgets</div></div>
+      </div>
+    </div>
+
+    <!-- 1b glassmorphic -->
+    <div class="dv-opt" id="1b">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Glassmorphic — frosted translucent cards floating over a soft colour wash, big earnings number in the glass. Airy and premium.</div>
+      <div class="phone" style="background:linear-gradient(165deg,#c9d8ff 0%,#e7dcff 46%,#d3f0ff 100%)">
+        <div style="position:absolute;width:230px;height:230px;border-radius:50%;background:#7aa2ff;filter:blur(60px);opacity:.55;top:-40px;right:-50px"></div>
+        <div style="position:absolute;width:210px;height:210px;border-radius:50%;background:#c79bff;filter:blur(60px);opacity:.5;bottom:120px;left:-60px"></div>
+        <div style="position:relative;padding:60px 20px 0;display:flex;align-items:center;gap:13px">
+          <div style="width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.35);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1f2450" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+          <div style="font-size:15px;font-weight:700;color:#2a2f5c">3 gadgets found</div>
+        </div>
+        <div style="position:relative;margin:18px 18px 0;background:rgba(255,255,255,.4);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.6);border-radius:26px;padding:22px">
+          <div style="font-size:13px;font-weight:700;color:#4a4f7a;letter-spacing:.02em">Total value we found</div>
+          <div style="font-size:46px;font-weight:900;letter-spacing:-.03em;color:#1c2150;line-height:1;margin-top:5px">€2,810</div>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <div style="flex:1;background:rgba(255,255,255,.5);border-radius:14px;padding:11px 13px"><div style="font-size:11.5px;font-weight:700;color:#5a5f88;text-transform:uppercase;letter-spacing:.03em">Rent / wk</div><div style="font-size:20px;font-weight:800;color:#3b5bd6;margin-top:2px">€197</div></div>
+            <div style="flex:1;background:rgba(255,255,255,.5);border-radius:14px;padding:11px 13px"><div style="font-size:11.5px;font-weight:700;color:#5a5f88;text-transform:uppercase;letter-spacing:.03em">Items</div><div style="font-size:20px;font-weight:800;color:#1c2150;margin-top:2px">3</div></div>
+          </div>
+        </div>
+        <div style="position:relative;padding:16px 18px 0;display:flex;flex-direction:column;gap:11px">
+          <div style="background:rgba(255,255,255,.34);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.55);border-radius:18px;padding:14px;display:flex;gap:12px;align-items:center">
+            <div style="flex:none;width:46px;height:46px;border-radius:13px;background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;color:#3b5bd6"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 20h20"/></svg></div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1c2150">MacBook Pro 14"</div><div style="font-size:12px;color:#5a5f88;font-weight:600;margin-top:2px">M3 · 512GB · Space Black</div></div>
+            <div style="text-align:right"><div style="font-size:18px;font-weight:800;color:#3b5bd6">€95</div><div style="font-size:11.5px;color:#7c81a8;font-weight:600">€1,450</div></div>
+          </div>
+          <div style="background:rgba(255,255,255,.34);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.55);border-radius:18px;padding:14px;display:flex;gap:12px;align-items:center">
+            <div style="flex:none;width:46px;height:46px;border-radius:13px;background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;color:#3b5bd6"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="12" rx="2.5"/><path d="M8 7l1.5-2.5h5L16 7"/><circle cx="12" cy="13" r="3.2"/></svg></div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1c2150">Sony α7 III</div><div style="font-size:12px;color:#5a5f88;font-weight:600;margin-top:2px">Mirrorless · Body only · Black</div></div>
+            <div style="text-align:right"><div style="font-size:18px;font-weight:800;color:#3b5bd6">€70</div><div style="font-size:11.5px;color:#7c81a8;font-weight:600">€980</div></div>
+          </div>
+          <div style="background:rgba(255,255,255,.34);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.55);border-radius:18px;padding:14px;display:flex;gap:12px;align-items:center">
+            <div style="flex:none;width:46px;height:46px;border-radius:13px;background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;color:#3b5bd6"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11.5" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg></div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#1c2150">PlayStation 5</div><div style="font-size:12px;color:#5a5f88;font-weight:600;margin-top:2px">Slim · 1TB · White</div></div>
+            <div style="text-align:right"><div style="font-size:18px;font-weight:800;color:#3b5bd6">€32</div><div style="font-size:11.5px;color:#7c81a8;font-weight:600">€380</div></div>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:14px 18px 34px"><div style="width:100%;height:56px;border-radius:16px;background:#2f45c9;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 26px -8px rgba(47,69,201,.6)">List all 3 gadgets</div></div>
+      </div>
+    </div>
+
+    <!-- 1c dark -->
+    <div class="dv-opt" id="1c">
+      <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Dark fintech — near-black canvas, money in a mint accent that reads as "cash". Cards are subtle dark glass; the total glows.</div>
+      <div class="phone" style="background:#0c0d11">
+        <div style="position:absolute;width:260px;height:260px;border-radius:50%;background:#1f7a5c;filter:blur(80px);opacity:.4;top:-60px;right:-60px"></div>
+        <div style="position:relative;padding:60px 22px 0;display:flex;align-items:center;gap:13px">
+          <div style="width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e6e6ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+          <div style="font-size:15px;font-weight:600;color:#8b8d99">3 gadgets found</div>
+        </div>
+        <div style="position:relative;margin:18px 22px 0;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:24px;padding:22px">
+          <div style="font-size:13px;font-weight:600;color:#8b8d99;letter-spacing:.02em">Estimated total value</div>
+          <div style="font-size:46px;font-weight:900;letter-spacing:-.03em;color:#3ddc97;line-height:1;margin-top:5px;text-shadow:0 0 24px rgba(61,220,151,.35)">€2,810</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:16px;background:rgba(61,220,151,.1);border:1px solid rgba(61,220,151,.22);border-radius:12px;padding:11px 14px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3ddc97" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg>
+            <div style="font-size:14px;font-weight:600;color:#cfeee0">Rent them all for <span style="font-weight:800;color:#3ddc97">€197/week</span></div>
+          </div>
+        </div>
+        <div style="position:relative;padding:16px 18px 0;display:flex;flex-direction:column;gap:11px">
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:15px;display:flex;gap:13px;align-items:center">
+            <div style="flex:none;width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;color:#8fb2ff"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 20h20"/></svg></div>
+            <div style="flex:1;min-width:0"><div style="font-size:15.5px;font-weight:700;color:#f0f0f4">MacBook Pro 14"</div><div style="font-size:12.5px;color:#8b8d99;font-weight:500;margin-top:2px">M3 · 512GB · Space Black</div></div>
+            <div style="text-align:right"><div style="font-size:19px;font-weight:800;color:#3ddc97;letter-spacing:-.02em">€95<span style="font-size:12px;font-weight:600;color:#7bbfa2">/wk</span></div><div style="font-size:12px;color:#6b6d78;font-weight:600;margin-top:1px">€1,450 resale</div></div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:15px;display:flex;gap:13px;align-items:center">
+            <div style="flex:none;width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;color:#8fb2ff"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="12" rx="2.5"/><path d="M8 7l1.5-2.5h5L16 7"/><circle cx="12" cy="13" r="3.2"/></svg></div>
+            <div style="flex:1;min-width:0"><div style="font-size:15.5px;font-weight:700;color:#f0f0f4">Sony α7 III</div><div style="font-size:12.5px;color:#8b8d99;font-weight:500;margin-top:2px">Mirrorless · Body only · Black</div></div>
+            <div style="text-align:right"><div style="font-size:19px;font-weight:800;color:#3ddc97;letter-spacing:-.02em">€70<span style="font-size:12px;font-weight:600;color:#7bbfa2">/wk</span></div><div style="font-size:12px;color:#6b6d78;font-weight:600;margin-top:1px">€980 resale</div></div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:15px;display:flex;gap:13px;align-items:center">
+            <div style="flex:none;width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;color:#8fb2ff"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11.5" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg></div>
+            <div style="flex:1;min-width:0"><div style="font-size:15.5px;font-weight:700;color:#f0f0f4">PlayStation 5</div><div style="font-size:12.5px;color:#8b8d99;font-weight:500;margin-top:2px">Slim · 1TB · White</div></div>
+            <div style="text-align:right"><div style="font-size:19px;font-weight:800;color:#3ddc97;letter-spacing:-.02em">€32<span style="font-size:12px;font-weight:600;color:#7bbfa2">/wk</span></div><div style="font-size:12px;color:#6b6d78;font-weight:600;margin-top:1px">€380 resale</div></div>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:14px 18px 34px;background:linear-gradient(180deg,transparent,#0c0d11 30%)"><div style="width:100%;height:56px;border-radius:16px;background:#3ddc97;color:#04241a;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center">List all 3 gadgets</div></div>
+      </div>
+    </div>
+
+  </div>
+  <p class="dv-next">Try next: "apply <a class="dv-oid" href="#1c">1c</a> dark theme to the whole prototype" · "make <a class="dv-oid" href="#1b">1b</a> glass but darker" · "combine the <a class="dv-oid" href="#1a">1a</a> hero with <a class="dv-oid" href="#1c">1c</a> cards" · "new directions"</p>
+</section>
+</x-dc>
+</body>
+</html>
