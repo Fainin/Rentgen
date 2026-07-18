@@ -9,6 +9,14 @@ Point a phone at your stuff → an agent identifies each item, prices its **resa
 rent/day** against live web comps → an **idle-capital total** adds up. A 1-day hackathon
 build. Name: *Röntgen* (X-ray) + "rent-gen".
 
+## Current state
+
+**Bare scaffold + locked contracts.** In place: the monorepo, tooling, docs, and the SDK
+**types + adapter interfaces** (`packages/sdk/src/types.ts`, `adapters/types.ts`). NOT yet
+built: adapters, `RentgenClient`, storage, widgets, app wiring. Everything below the
+"Architecture" heading is the **target** to build against — the files it names mostly
+don't exist yet. `npm run dev` currently boots a headline-only shell.
+
 ## Guiding principles (do not violate)
 
 1. **PoC-first.** Build the dumbest thing that proves the value, end-to-end, *then* make
@@ -54,7 +62,7 @@ See `packages/sdk/src/types.ts` and `adapters/types.ts`:
 
 ```bash
 npm install            # root — links workspaces
-npm run dev            # run the app (Vite) — works offline with mock data, no keys
+npm run dev            # boot the app shell (Vite)
 npm run typecheck      # tsc --noEmit across both packages
 npm run build          # SDK (tsup → dist) + app
 ```
@@ -91,5 +99,5 @@ npm run build          # SDK (tsup → dist) + app
 3. **Pricing adapter** — `tavily-comps.ts` (comps → reconcile → grounded price).
 4. **Glue/polish** — total logic, demo prep. *(Merge into 2/3 if only 3 people.)*
 
-The stub adapters already make the app run end-to-end, so nobody is blocked. Swap the real
-adapters in behind the same interfaces.
+Build the `stub` adapters first so the app runs end-to-end offline — then nobody is
+blocked while the real OpenAI/Tavily adapters land behind the same interfaces.

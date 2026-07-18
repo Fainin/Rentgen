@@ -10,17 +10,22 @@ Built for the {Tech: Europe} × Almedia Hackathon, Berlin.
 SDK-first, fully client-side, **zero backend**. The value chain ships as a reusable
 package (`@rentgen/sdk`); a thin React app (`apps/app`) just launches it.
 
+> **STATUS: bare scaffold.** Monorepo, tooling, docs, and the locked SDK **contracts**
+> (`packages/sdk/src/types.ts`, `adapters/types.ts`) are in place. The implementation —
+> adapters, client, widgets, app wiring — is what the team builds. See `CLAUDE.md`.
+
 ## Quickstart
 
 ```bash
 npm install          # links the workspaces
-npm run dev          # starts the app on http://localhost:5173
+npm run dev          # boots the app shell on http://localhost:5173
+npm run typecheck    # type-checks both workspaces
 ```
 
-Open it, tap **Scan your stuff**, pick any photo → mock item cards + an idle-capital
-total appear. **No API keys needed** — it runs offline on stub data out of the box.
+Right now the app is just a headline shell — start filling in `packages/sdk` against the
+contracts, then mount the widgets in `apps/app`.
 
-### Go live (real OpenAI + Tavily)
+### API keys (when you wire up the real adapters)
 
 ```bash
 cp apps/app/.env.example apps/app/.env   # then fill in the keys
@@ -31,8 +36,7 @@ VITE_OPENAI_API_KEY=sk-…
 VITE_TAVILY_API_KEY=tvly-…
 ```
 
-Restart `npm run dev`. Keys are demo-scoped and **rotated after the event** — never
-commit `.env`.
+Keys are demo-scoped and **rotated after the event** — never commit `.env`.
 
 ## Layout
 
@@ -59,7 +63,7 @@ CLAUDE.md       instructions for Claude Code working in this repo
 
 ## Build order (phases are a firewall)
 
-1. **Phase 1 (PoC):** tap → priced items → total, end-to-end. ← *this scaffold gets you here*
+1. **Phase 1 (PoC):** tap → priced items → total, end-to-end. ← *build this first*
 2. **Phase 2:** live pan with an in-browser detector — only once Phase 1 demos cleanly.
 3. **Phase 3 (stretch):** cognee memory, shareable report card.
 

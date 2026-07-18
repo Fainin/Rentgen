@@ -4,11 +4,7 @@
   "description": "Rentgen's reusable value chain (detect → enrich → price → total) + drop-in <rentgen-scanner> / <rentgen-results> widgets. Framework-agnostic, client-side.",
   "license": "Apache-2.0",
   "type": "module",
-  "sideEffects": [
-    "./src/index.ts",
-    "./src/widgets/*.ts",
-    "./dist/*"
-  ],
+  "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
