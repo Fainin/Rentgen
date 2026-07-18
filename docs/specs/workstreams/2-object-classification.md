@@ -35,7 +35,7 @@ in it, each with a name, category, condition, and confidence. You use OpenAI vis
 
 ```ts
 // detection/index.ts
-export function createDetectionAdapter(config: { openaiApiKey?: string; model?: 'gpt-4o' | 'gpt-4o-mini' }): DetectionAdapter
+export function createDetectionAdapter(config: { openaiApiKey?: string; model?: 'gpt-5.6-luna' }): DetectionAdapter
 ```
 
 Return type is the frozen `DetectionAdapter`. Stream 4 wires this into `configureRentgen`
@@ -57,10 +57,10 @@ by importing your factory — it never edits your files, you never edit its.
 
 ### Model & transport
 
-- **`gpt-4o`** with **Structured Outputs** (`response_format: { type: "json_schema", strict: true }`)
-  — the JSON always parses, no regex rescue. Use `gpt-4o-mini` only as a speed/cost fallback,
-  selectable via the factory config's optional `model` field (default `gpt-4o`); brand/model
-  reading off small crops is where mini gets worse.
+- **`gpt-5.6-luna`** with **Structured Outputs** (`response_format: { type: "json_schema", strict: true }`)
+  — the JSON always parses, no regex rescue. Single OpenAI model for the whole detection surface
+  (Pflicht-Partner + main prize = OpenAI credits). The factory config's optional `model` field is
+  reserved for a future cheaper lane; for now there is no mini/nano sibling in the 5.6 family.
 - Plain browser `fetch` to `https://api.openai.com/v1/chat/completions`, key from the
   factory config. Image goes in as the data URL you received — no re-encoding (Stream 1
   already delivers ≤768 px JPEG; a Phase-1 full photo may be bigger — pass
@@ -84,8 +84,15 @@ on cards. Optimize for that, in this order:
    `"used - visible wear"`, `"like new"`. No invented condition details.
 4. **Confidence** = identification certainty (is the *name* right?), not "is there an
    object". Tell the model: unreadable brand ⇒ generic name + honest lower confidence.
-5. **Skip rules:** no fixtures, no walls/floor, no cables/chargers as standalone items, no
-   people. Sellable/rentable movable goods only.
+5. **Sellability is a hard filter, not a soft hint.** Only return objects a real person could
+   list on a marketplace **today**: movable, owned, non-consumable, non-perishable, worth ≥ a few
+   euros. **Hard no:** fixtures (shelves, radiators, doors, windows), walls/floor/ceiling,
+   built-in furniture, loose cables/chargers, consumables (food, loose batteries), plants, pets,
+   people, trash/wrapping, structural parts. **Honesty rule:** if you can't name it specifically
+   enough to search for, or it's clearly broken-beyond-sale (shattered, corroded, unrecognizable),
+   return it with **low confidence** so Stream 4's compile gate drops it — never inflate a vague
+   sighting into a confident listing. Stream 4 re-checks and drops what slips through; be honest
+   at the source.
 
 ### One adapter, two callers
 
@@ -115,8 +122,8 @@ it, don't build it.
 
 ### Cost/latency budget (credits are fine, seconds are not)
 
-~1 crop ≈ 1 call ≈ 2–4 s. That's fine: calls run per-object in parallel and the AR overlay
-(Stream 1) shows "scanning…" meanwhile. Keep `max_tokens` ≤ 500 and the temperature at 0.2
+~1 crop ≈ 1 call ≈ 2–4 s. That's fine: calls run per-object in parallel and the results list
+(Stream 4) shows a "scanning…" placeholder per item meanwhile.
 — we want the same answer for the same object every time (that consistency is also what
 makes dedup and the rehearsal cache work).
 

@@ -15,7 +15,7 @@ Point a phone at your stuff → an agent identifies each item, prices its **resa
 1. **PoC-first.** Build the dumbest thing that proves the value, end-to-end, *then* make it fancy. Each phase is independently demo-able.
 2. **SDK-first.** The value chain (detect → enrich → price → total) lives in `@rentgen/sdk` as reusable, framework-agnostic code. `apps/app` only *launches* it — keep app-specific logic out of the SDK, and keep the SDK free of app/Vite specifics.
 3. **Phases are a firewall.** Don't start Phase 2 (live pan) until Phase 1 demos cleanly. Don't start Phase 3 (cognee, report card) until Phase 2 is solid.
-4. **No backend.** Everything is client-side. Persistence = `localStorage`. Adapters call OpenAI/Tavily directly from the browser (demo-scoped keys — see gotchas).
+4. **No backend.** Everything is client-side. Persistence = `localStorage`. Adapters call OpenAI/Gemini/Tavily directly from the browser (demo-scoped keys — see gotchas). Model split: **gpt-5.6-luna** (OpenAI, hero detection — Pflicht-Partner), **gemini-flash-latest** (live-pan + price reconcile), **Tavily** (comps).
 
 ## Architecture
 

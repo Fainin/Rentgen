@@ -16,5 +16,9 @@ dist/
 .idea/
 *.log
 
+# Local agent state — never commit (session IDs, runtime spill)
+.gjc/
+.claude/settings.local.json
+
 # Vite
 .vite/

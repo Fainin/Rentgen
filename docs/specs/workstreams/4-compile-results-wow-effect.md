@@ -70,7 +70,9 @@ build against it in parallel and you swap their real modules in as they land —
 ## Pre-made decisions (so we don't collide)
 
 - `totalIdleValue` = **Σ of each item's resale midpoint** `(min+max)/2`. Single currency
-  (`EUR`). This is the frozen total contract.
+  (`EUR`). This is the frozen total contract. **The sum runs over list items only** — items that
+  fail the sellability gate (next section) never enter the list, so the idle-capital number is
+  honest by construction: no hallucinated objects, no junk priced as treasure, no fixtures.
 - `RentgenClient` **awaits enrichments with `Promise.all`** (parallel, one call per object).
 - The **event bus is the only widget↔widget channel.** Results subscribes to
   `scan:complete`; it never imports the scanner or the client internals.
@@ -89,6 +91,31 @@ build against it in parallel and you swap their real modules in as they land —
 - Keys stay in `apps/app` env and are passed into `configureRentgen`; the SDK never reads
   `import.meta.env`.
 
+## Sellability gate — only honestly-sellable items make the list
+
+The list is a promise: every card is something a real person could list on a marketplace **today**.
+`RentgenClient.scan()` runs a **hard filter before an item enters `ScanResult.items`** — a failed
+item is dropped silently (the scan still completes; the total simply doesn't count it). An item
+must pass **all** of:
+
+1. **Sellable category.** Not a fixture / structural / non-goods item. Detection (Stream 2)
+   refuses these in the prompt, but re-check defensively with a denylist of name/category tokens
+   (`wall|floor|ceiling|window|door|radiator|curtain|blind|built-in|pipe|cable|charger|trash|plant|pet|person`).
+   Hit ⇒ drop.
+2. **Confidence ≥ 0.4 at compile time.** Stream 2 already drops `< 0.3`; the compile floor is
+   stricter — a borderline sighting isn't worth a card or a place in the total.
+3. **Grounded price.** `sources.length ≥ 1` (a real Tavily comp URL backs the number) **and**
+   `resale.max > 0`. No source ⇒ no listing — a price the model invented is worse than a missing
+   item. Stream 3 throws on zero comps; this is the defensive backstop if one ever resolves.
+4. **Resale midpoint ≥ €5** (constant, single place). A sub-€5 item isn't worth listing and would
+   smear the total with rounding noise. Hero demo items clear this trivially.
+
+**Honesty, not pruning for show:** the goal is *never show something that can't honestly be
+sold* — not "make the total look big". If a scan returns zero sellable items, the list is empty
+and the total is €0; say so plainly. Surface a small "N items hidden — not sellable / unpriced"
+counter for the demo operator (not the jury) so the filter is visible, not magic. Stream 2's
+prompt is the first line of defense (be honest at the source); this gate is the backstop.
+
 ## Agreed handoffs from Streams 1 & 2 (team-confirmed)
 
 Two compile-time duties land here (details in specs 1 & 2, "Design decisions"):
@@ -100,7 +127,7 @@ Two compile-time duties land here (details in specs 1 & 2, "Design decisions"):
    one. Stream 2's naming rules are designed to make this string-stable.
 2. **Persist the scan image as the item image — on `EnrichedItem.image`.** The `imageBase64`
    passed into `scan()` *is* the item image — exactly **one image per item**, ever (Phase 2: a
-   single-object crop; a white-background cutout instead if Stream 1's optional SlimSAM step is
+   single-object crop; a white-background cutout instead if Stream 1's optional Gemini-mask step is
    active — same field, same shape, you can't tell and don't need to). **Contract (confirmed
    with Stream 5):** add an **optional** `readonly image?: string` (data URL) to `EnrichedItem`
    so both `<rentgen-results>` and Stream 5's `photoProvider` read the same `item.image`. This
@@ -138,3 +165,5 @@ decision, make the edit deliberately, and keep the README registry in sync.
 - The hero optionally shows a **passive monthly income** line from the local 5–10% heuristic,
   without changing the total contract.
 - `npm run dev` boots the assembled app; a rehearsal re-scan is instant (cache hit).
+- **Sellability gate** drops non-sellable / ungrounded / sub-€5 items before they reach the list;
+  the total reflects only honestly-sellable items (visible via the hidden-items counter).

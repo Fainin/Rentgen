@@ -41,7 +41,7 @@ Rentgen/
       adapters/
         types.ts               DetectionAdapter / EnrichmentAdapter / AssetAdapter interfaces
         openai-vision.ts        DetectionAdapter: browser fetch → OpenAI vision → objects
-        tavily-comps.ts          EnrichmentAdapter: browser fetch → Tavily comps → OpenAI reconcile → priced item + sources
+        tavily-comps.ts          EnrichmentAdapter: browser fetch → Tavily comps → Gemini reconcile → priced item + sources
       client/RentgenClient.ts   orchestrates detect → enrich (parallel) → persist → return
       storage/sessionStore.ts  localStorage wrapper: session state + image-hash cache (dedup rehearsal runs)
       widgets/
@@ -50,17 +50,17 @@ Rentgen/
       index.ts                 public exports: widgets (self-register), RentgenClient, adapter interfaces, types
   apps/app/                    plain React (Vite) app — "the base app that uses and launches it"
     src/App.tsx                 mounts <rentgen-scanner>/<rentgen-results>, idle-capital headline/layout
-    .env.example                VITE_OPENAI_API_KEY / VITE_TAVILY_API_KEY (demo-scoped, rotated post-event)
+    .env.example                VITE_OPENAI_API_KEY / VITE_GEMINI_API_KEY / VITE_TAVILY_API_KEY (demo-scoped, rotated post-event)
 ```
 
-**No backend.** Adapters call OpenAI and Tavily directly from the browser using build-time-embedded keys (`import.meta.env.VITE_*` via Vite). This is a deliberate, explicitly approved trade-off for a one-day hackathon demo: keys are demo-scoped/rate-limited and rotated after the event. If this constraint changes later (a shipped product, not a demo), the fix is to move `adapters/*` behind a thin server and keep everything else — widgets, `RentgenClient`'s public API, `apps/app` — unchanged, since the adapter interfaces don't encode *where* they run.
+**No backend.** Adapters call OpenAI, Gemini, and Tavily directly from the browser using build-time-embedded keys (`import.meta.env.VITE_*` via Vite). This is a deliberate, explicitly approved trade-off for a one-day hackathon demo: keys are demo-scoped/rate-limited and rotated after the event. If this constraint changes later (a shipped product, not a demo), the fix is to move `adapters/*` behind a thin server and keep everything else — widgets, `RentgenClient`'s public API, `apps/app` — unchanged, since the adapter interfaces don't encode *where* they run.
 
 **Why this split:** the adapter pattern is the SDK's plugin surface — anything OpenAI/Tavily/cognee-shaped plugs in by implementing an interface and registering it in `RentgenClient`, without touching the widgets or the app. The widgets are the distribution mechanism — standard Custom Elements consumable from React (native passthrough in React 19+), Angular (`CUSTOM_ELEMENTS_SCHEMA`), or plain HTML, styled purely via CSS custom properties (`--rentgen-accent`, `--rentgen-card-bg`, `--rentgen-radius`, …) so host apps theme without touching internals.
 
 ## 4. Three adapter types (the plugin surface)
 
 1. **`DetectionAdapter`** — `detect(imageBase64) → DetectedObject[]`. Default: `openai-vision`.
-2. **`EnrichmentAdapter`** — `enrich(object) → EnrichedItem` (price range + rent/day + sources). Default: `tavily-comps` (Tavily search → OpenAI reconcile).
+2. **`EnrichmentAdapter`** — `enrich(object) → EnrichedItem` (price range + rent/day + sources). Default: `tavily-comps` (Tavily search → Gemini Flash reconcile).
 3. **`AssetAdapter`** *(optional, stretch, §7 Phase 3)* — `render(session) → Asset` (e.g. a shareable report-card image). Empty by default.
 
 Adding a new enrichment source during the hackathon (swap Tavily, add cognee) is "write an adapter implementing the interface, register it in `RentgenClient`" — no widget or app changes.
@@ -69,7 +69,7 @@ Adding a new enrichment source during the hackathon (swap Tavily, add cognee) is
 
 1. `<rentgen-scanner>` captures a photo → `RentgenClient.scan(imageBase64)` → checks the localStorage image-hash cache (instant on rehearsal repeats) → else runs the `DetectionAdapter` → runs the `EnrichmentAdapter` per object (parallel) → writes the session to localStorage → returns `{ items, totalIdleValue }`.
 2. `<rentgen-results>` renders from the scan result, or calls `RentgenClient.consume(sessionId)` to redisplay an existing session's compiled items, total, sources, and any assets — without re-scanning. This is the SDK-level realization of "give me the final product data and assets": a read method backed by local storage instead of an HTTP endpoint, since there's no server.
-3. Phase 2 (live pan + in-browser detector/tracker) and Phase 3 (`AssetAdapter` report card, cognee persistence) both slot into `@rentgen/sdk` later without changing `apps/app`.
+3. Phase 2 (live pan + cloud detector/tracker) and Phase 3 (`AssetAdapter` report card, cognee persistence) both slot into `@rentgen/sdk` later without changing `apps/app`.
 
 ## 6. Build order (this is the whole plan)
 
@@ -84,7 +84,7 @@ RentgenClient.scan(imageBase64):
     1. DetectionAdapter (openai-vision): "list the distinct sellable/rentable objects in this photo,
                        each with name, category, condition, confidence"
     2. for each object → EnrichmentAdapter (tavily-comps): fetch resale/rental comps (with source links),
-                       reconcile via OpenAI → { resale range, rentPerDay range, confidence }
+                       reconcile via Gemini → { resale range, rentPerDay range, confidence }
        ▼
 <rentgen-results>: render item cards + running total
 ```
@@ -97,10 +97,16 @@ That's the entire PoC — one screen, one button, two widgets, one SDK call. If 
 ### Phase 2 — Make it live (afternoon, only if Phase 1 is solid)
 Replace "tap to capture" with a **live pan** so the total climbs as you move the camera:
 
-- **Local detector in-browser** (TF.js COCO-SSD or transformers.js YOLO) draws boxes at a few fps → the "live" feel, for free.
-- **Track** each box across frames (simple centroid/IoU tracker) → stable `trackId` per physical object.
-- **Gate:** only a *new* track that's been stable for ≥ N frames triggers `RentgenClient.scan()`. Existing tracks are ignored → no double-counting, no cost blowup.
-- **Best-in-frame crop:** buffer a new object over ~1s, send the frame where it's **largest + most centered + sharpest** (`area + centeredness + sharpness + detector-confidence`). One call per object, best possible crop.
+- **Cloud detector** (`gemini-flash-latest`, browser fetch, `x-goog-api-key`) samples one frame
+  every ~250 ms → identified objects (name/category/confidence + optional region). **No on-device
+  model bundle, no bounding-box overlay** — boxes glitch at low fps and read as fake AR; items
+  surface as cards in the results list, not on the feed.
+- **Identity-track** each object across frames by `name`+`category` (dHash fallback) → one scan
+  per physical object, no double-counting, no cost blowup.
+- **Gate:** only a *newly confirmed* identity (seen in ≥ N consecutive frames) triggers
+  `RentgenClient.scan()`. Existing identities are ignored.
+- **Best-frame crop:** buffer a new object ~0.5 s, send the frame where it's **largest + most
+  centered + sharpest** (`area + centeredness + sharpness`). One call per object, best crop.
 - Same `RentgenClient.scan()` call as Phase 1 — now invoked with a single-object crop instead of a full photo.
 
 ### Phase 3 — Make it a product (stretch, only if time)
@@ -111,20 +117,26 @@ Replace "tap to capture" with a **live pan** so the total climbs as you move the
 
 | Tool | Phase | Role |
 |---|---|---|
-| **OpenAI** | 1 | Vision identify + reconcile comps into a defensible number |
+| **OpenAI** | 1 | Vision identify (`gpt-5.6-luna`) — the hero detection. Pflicht-Partner + main prize credits. |
 | **Tavily** | 1 | Live resale/rental comps with source links → price is **grounded, not hallucinated** |
 | **cognee** | 3 | Persistent asset portfolio across sessions (turns the toy into a product) |
+
+> **Implementation note (not a partner):** the **live-pan detector** and the **price reconcile**
+> both run on `gemini-flash-latest` (Google AI Studio, free tier) — preserves OpenAI credits for
+> the hero detection and ships no model bundle to the browser. Tavily grounds prices; Cognee is
+> Phase 3. A **sellability gate** in `RentgenClient` drops non-sellable / ungrounded / sub-€5
+> items before they reach the list, so the idle-capital total is honest by construction.
 
 ## 8. Team split & timeline (8h)
 
 **Split (parallel from hour 1, against a stubbed `RentgenClient`):**
-1. **App/UI** — `apps/app` camera + capture + result cards + total layout. (Phase 2: overlay + detector wiring.)
+1. **App/UI** — `apps/app` camera + capture + result cards + total layout. (Phase 2: frame-sampler wiring, no overlay.)
 2. **Vision adapter** — `openai-vision.ts` multi-object identify from a photo.
-3. **Pricing adapter** — `tavily-comps.ts` comps → OpenAI reconcile → grounded price + localStorage cache.
+3. **Pricing adapter** — `tavily-comps.ts` comps → Gemini reconcile → grounded price + localStorage cache.
 4. **Glue/polish** — total logic, report card, demo prep. *(Merge into 2/3 if only 3 people.)*
 
 **Timeline:**
-- **10:00–11:00** Scaffold monorepo; wire OpenAI + Tavily keys into `.env`; agree `RentgenClient`/adapter interfaces (§4); stub adapters so everyone unblocks. **Smoke-test Tavily's browser CORS behavior now** — see §9 risk.
+- **10:00–11:00** Scaffold monorepo; wire OpenAI + Gemini + Tavily keys into `.env`; agree `RentgenClient`/adapter interfaces (§4); stub adapters so everyone unblocks. **Smoke-test Tavily's browser CORS behavior now** — see §9 risk.
 - **11:00–14:00** Phase 1 in parallel against the stub.
 - **14:00–15:30** Integrate real adapters → first end-to-end: photo → priced items → total.
 - **15:30–18:00** *If Phase 1 solid:* Phase 2 live pan. Otherwise polish Phase 1 hard.

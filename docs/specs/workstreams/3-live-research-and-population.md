@@ -10,14 +10,14 @@
 
 Given one classified object, **research live web comps and populate a defensible price** —
 resale range, rent/day range, and the **source links** that back them. Numbers must be
-*grounded, not hallucinated*. You use Tavily (search) → OpenAI (reconcile).
+*grounded, not hallucinated*. You use Tavily (search) → Gemini Flash (reconcile).
 
-**Success metric:** `createEnrichmentAdapter({ tavilyApiKey, openaiApiKey })` prices a real
+**Success metric:** `createEnrichmentAdapter({ tavilyApiKey, geminiApiKey })` prices a real
 venue object with plausible EUR ranges and ≥1 clickable, real source link, in < ~8s. The
 stub prices anything instantly offline.
 
-**Grounding is the product.** The temptation is to let OpenAI price from priors and
-decorate with links. The pipeline must be the reverse: Tavily results in → OpenAI reconciles
+**Grounding is the product.** The temptation is to let Gemini price from priors and
+decorate with links. The pipeline must be the reverse: Tavily results in → Gemini reconciles
 *only those* → sources are the actual result URLs. The prompt must forbid outside knowledge
 for the numbers.
 
@@ -30,7 +30,7 @@ for the numbers.
 ## You own (create these)
 
 - `enrichment/tavily-comps.ts` — implements `EnrichmentAdapter`: Tavily search for resale +
-  rental comps (keep the source URLs) → OpenAI reconciles the noisy results into
+  rental comps (keep the source URLs) → Gemini reconciles the noisy results into
   `{ resale, rentPerDay }` ranges.
 - `enrichment/stub.ts` — an `EnrichmentAdapter` returning deterministic mock prices +
   fake-but-plausible sources (no keys, no network).
@@ -42,11 +42,17 @@ for the numbers.
 ```ts
 // enrichment/index.ts
 export function createEnrichmentAdapter(config: {
-  tavilyApiKey?: string; openaiApiKey?: string; currency?: string;
+  tavilyApiKey?: string; geminiApiKey?: string; currency?: string;
 }): EnrichmentAdapter
 ```
 
 Return type is the frozen `EnrichmentAdapter`. Stream 4 imports and wires it.
+
+> ⚠️ **Seam change (coordinate with Stream 4):** reconcile moved OpenAI → Gemini
+> (`gemini-flash-latest`), so the factory takes `geminiApiKey`, not `openaiApiKey`. Stream 4
+> must pass `VITE_GEMINI_API_KEY` into `createEnrichmentAdapter` inside `configureRentgen`.
+> Rationale: keeps the **one** OpenAI call (hero detection, gpt-5.6-luna) on the prize credits;
+> the high-volume per-item reconcile rides Google's AI Studio free tier (same alias krempel uses).
 
 ## Pre-made decisions (so we don't collide)
 
@@ -58,20 +64,20 @@ Return type is the frozen `EnrichmentAdapter`. Stream 4 imports and wires it.
   change **only the transport inside `tavily-comps.ts`** (e.g. a CORS-safe hosted path) —
   the `EnrichmentAdapter` interface hides *where* the call runs, so nothing else moves.
   Smoke-test this first thing; don't discover it on demo day.
-- Keys via the **factory config**, never `import.meta.env`. Reconcile step: ask OpenAI for
+- Keys via the **factory config**, never `import.meta.env`. Reconcile step: ask Gemini for
   strict JSON and parse defensively; throw only on hard API failure.
 - Everything in `enrichment/`; outside imports = frozen types/interfaces only.
 - **Comp noise:** search results mix new-price, broken-item, and wrong-model listings. Ask
-  OpenAI for a *range* (min/max of plausible used comps), not a point — ranges absorb noise.
+  Gemini for a *range* (min/max of plausible used comps), not a point — ranges absorb noise.
 - **Query construction matters more than the model.** `"{name} {condition}" used price site:ebay OR marketplace`
   style queries beat generic ones. Keep query builders as small pure functions (testable by eye).
 - **Single reconcile call.** Two Tavily searches per object (resale, rental) run in
-  **parallel**; one OpenAI JSON-mode call reconciles *both* ranges — cheaper and atomic.
+  **parallel**; one Gemini JSON-mode call reconciles *both* ranges — cheaper and atomic.
 
 ## Requirements
 
 - **R1:** `index.ts` exports `createEnrichmentAdapter(config: { tavilyApiKey?: string;
-  openaiApiKey?: string; currency?: string }): EnrichmentAdapter` — real adapter iff **both**
+  geminiApiKey?: string; currency?: string }): EnrichmentAdapter` — real adapter iff **both**
   keys present, else the stub.
 - **R2:** Stub is deterministic (same input → same output), zero network, resolves fast
   (<50ms), returns a valid `EnrichedItem` with ≥1 plausible fake source; prices vary by
@@ -82,9 +88,9 @@ Return type is the frozen `EnrichmentAdapter`. Stream 4 imports and wires it.
 - **R4:** Real adapter: every `Source.url` is a URL present in Tavily's results;
   `sources.length ≥ 1` or the call throws.
 - **R5:** All `PriceRange`s satisfy `0 < min ≤ max` and `currency === config.currency ?? 'EUR'`.
-- **R6:** Real adapter: two parallel Tavily searches (resale, rental); one OpenAI JSON-mode
+- **R6:** Real adapter: two parallel Tavily searches (resale, rental); one Gemini JSON-mode
   call reconciles both ranges.
-- **R7:** Malformed OpenAI JSON → one retry with a "JSON only" nudge, then throw. Any hard
+- **R7:** Malformed Gemini JSON → one retry with a "JSON only" nudge, then throw. Any hard
   API failure (4xx/5xx/network) → throw with a service-naming message. Never resolve with
   fabricated data.
 - **R8:** If rental comps are empty, derive `rentPerDay` from the resale midpoint (1.5–3%/day
@@ -101,7 +107,7 @@ Return type is the frozen `EnrichmentAdapter`. Stream 4 imports and wires it.
 - **Rental comps missing, resale comps present** (common — most objects have resale
   listings, few have rental) → derive `rentPerDay` from the resale-midpoint heuristic
   (~1.5–3%/day), reuse the resale sources. Mark this branch in code.
-- **OpenAI returns malformed / non-JSON** → defensive parse, retry once with a "JSON only"
+- **Gemini returns malformed / non-JSON** → defensive parse, retry once with a "JSON only"
   nudge, then throw.
 - **Degenerate numbers** (min > max, ≤ 0, absurd outliers) → swap/clamp after parse; throw
   if still unusable.
@@ -120,12 +126,12 @@ All in `packages/sdk/src/enrichment/`:
 - `index.ts` — factory + barrel (R1). ~30 lines.
 - `stub.ts` — offline adapter (R2). Category→price table, hash of `name` for deterministic
   jitter.
-- `tavily-comps.ts` — real adapter (R4–R8): query builders → 2× Tavily `fetch` → OpenAI
+- `tavily-comps.ts` — real adapter (R4–R8): query builders → 2× Tavily `fetch` → Gemini
   reconcile → validate/clamp → `EnrichedItem`. Internal-only shapes (Tavily response,
   reconcile payload) stay private to this file.
 
 **Data models:** frozen `DetectedObject → EnrichedItem` (`PriceRange`, `Source`) — no new
-types. **Model:** gpt-4o-mini-class for reconcile.
+types. **Model:** `gemini-flash-latest` for reconcile.
 
 ### Growth points (don't pre-build)
 
@@ -154,7 +160,7 @@ types. **Model:** gpt-4o-mini-class for reconcile.
 
 ## Definition of done
 
-- `createEnrichmentAdapter({ tavilyApiKey, openaiApiKey })` prices a real `DetectedObject`
+- `createEnrichmentAdapter({ tavilyApiKey, geminiApiKey })` prices a real `DetectedObject`
   with grounded EUR ranges + ≥1 real, clickable source link, in < ~8s.
 - The stub prices anything instantly offline (<50ms), so the end-to-end chain always demos.
 

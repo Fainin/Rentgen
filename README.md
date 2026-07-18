@@ -27,6 +27,7 @@ cp apps/app/.env.example apps/app/.env   # then fill in the keys
 
 ```
 VITE_OPENAI_API_KEY=sk-…
+VITE_GEMINI_API_KEY=…      # gemini-flash-latest (live-pan + reconcile)
 VITE_TAVILY_API_KEY=tvly-…
 ```
 
@@ -57,7 +58,7 @@ CLAUDE.md       instructions for Claude Code working in this repo
 ## Build order (phases are a firewall)
 
 1. **Phase 1 (PoC):** tap → priced items → total, end-to-end. ← *build this first*
-2. **Phase 2:** live pan with an in-browser detector — only once Phase 1 demos cleanly.
+2. **Phase 2:** live pan with cloud detection (`gemini-flash-latest`) — only once Phase 1 demos cleanly.
 3. **Phase 3 (stretch):** cognee memory, shareable report card.
 
 Don't start a phase until the previous one demos cleanly. See `docs/specs/`.
