@@ -51,11 +51,14 @@ Two real failure modes surfaced in live testing, both now handled in `tavily-com
    derived 1.5–3%/day band. (The model returning `{0,0}` when comps are useless is treated
    as a hard throw, never clamped to a fake €1.)
 
-## Verified live in-browser (real keys, 2026-07-18 ~16:05)
-Full chain in an actual browser page: OpenAI vision (4 objects from a real desk photo) →
-Tavily comps + reconcile → grounded prices with real source URLs (mac-store24 used-MacBook
-listings for the MacBook Pro) → €643 total. Tavily CORS confirmed in-browser, not just in
-the Node preflight. Single-item enrich ~3.4–7.5 s (inside the <8 s target).
+## Verified live in-browser (real keys, 2026-07-18, twice)
+Full chain in an actual browser page: OpenAI vision → Tavily comps + reconcile → grounded
+prices with real source URLs (e.g. mac-store24 used-MacBook listings) → idle-capital total.
+Tavily CORS confirmed in-browser, not just in the Node preflight. Post-rent-clamp re-run:
+3 items, €949 total, all rents plausible, one unpriceable item (pencil) dropped by
+per-item failure isolation without killing the scan. Rehearsal re-scan of the same real
+image: 8 ms cache hit. Single-item enrich 3.4–9.8 s. Expect run-to-run variance in the
+absolute numbers — Tavily results differ per run; ranges + sources absorb it.
 
 ## Verified live in-browser (stub path, 2026-07-18 ~16:00)
 Scan → 4 cards + animated €-total → rehearsal re-scan 0 ms cache hit (same sessionId) →

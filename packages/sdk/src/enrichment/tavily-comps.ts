@@ -430,10 +430,18 @@ export function createTavilyCompsEnrichmentAdapter(config: TavilyCompsConfig): E
         resaleSources = fallbackSources(resaleComps.length > 0 ? resaleComps : rentalComps);
       }
 
-      const rentDerived = rentalComps.length === 0 || isUnusableRange(payload.rentPerDay);
-      const rentPerDayRange = rentDerived
+      let rentDerived = rentalComps.length === 0 || isUnusableRange(payload.rentPerDay);
+      let rentPerDayRange = rentDerived
         ? deriveRentFromResale(resaleRange)
         : clampRange(payload.rentPerDay.min, payload.rentPerDay.max, currency);
+
+      if (!rentDerived && isRentImplausible(rentPerDayRange, resaleRange)) {
+        // Rental comps matched a different product class (e.g. a cheap item's rental query
+        // surfacing listings for an unrelated, much pricier product) — the reconciled rent
+        // isn't grounded for *this* item. Fall back to the resale-derived band instead (R8).
+        rentPerDayRange = deriveRentFromResale(resaleRange);
+        rentDerived = true;
+      }
 
       let rentalSources: Source[] = [];
       if (!rentDerived) {

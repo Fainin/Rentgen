@@ -75,6 +75,9 @@ export class RentgenClient {
         totalIdleValue: 0,
         currency: this.currency,
       };
+      // Persist even the empty result so a rehearsal re-scan of the same image is a
+      // cache hit instead of a repeat detection call.
+      saveSession({ id: empty.sessionId, imageHash, result: empty, createdAt: Date.now() });
       emit('scan:complete', empty);
       return empty;
     }
