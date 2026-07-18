@@ -27,10 +27,12 @@ const CATEGORY_SET: ReadonlySet<string> = new Set(CATEGORIES);
 
 /**
  * Listing-quality gate: only items the model is at least this sure about survive.
- * Product decision (2026-07-18): listings focus on high-certainty finds — a missed item
- * beats a junk card. Overridable via the factory config's minConfidence.
+ * Tuning (2026-07-18, revised): the old 0.8 bar silently dropped most real finds whenever
+ * the exact brand/model wasn't legible — recall cratered. Lowered to 0.45 to match the
+ * krempel pipeline (which keeps ≥0.4 and detects far more); a plausible generic listing
+ * beats a missed item. Overridable via the factory config's minConfidence.
  */
-const DEFAULT_MIN_CONFIDENCE = 0.8;
+const DEFAULT_MIN_CONFIDENCE = 0.45;
 const MAX_ITEMS = 12;
 const NAME_MAX_LEN = 80;
 const CONDITION_MAX_LEN = 60;
@@ -61,7 +63,7 @@ Skip rules — do NOT list:
 - everyday low-value clutter with no real resale market: bottles, cups, mugs, glasses, dishes, cutlery, food and drinks, plants, decoration knick-knacks, pens, pencils, rulers, paper notebooks, office stationery;
 - anything whose realistic used resale value is clearly under about €15.
 
-Only include an object if you are at least 80% sure what it is (confidence ≥ 0.8). If you are less sure than that, omit it entirely — a missed item is better than a wrong listing.
+Include an object if you are reasonably sure what it is (confidence ≥ 0.4). When the exact brand/model isn't legible, still include it with a more generic name and an honestly lower confidence — a plausible generic listing beats a missed item. Only omit something if you genuinely cannot tell what kind of thing it is.
 
 List each distinct physical object once. An empty list is a valid and correct answer if nothing sellable/rentable is visible.
 

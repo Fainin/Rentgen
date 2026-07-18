@@ -18,7 +18,11 @@
 import type { Box } from './geometry.js';
 import { boxCenter, clampBox } from './geometry.js';
 
-const MARGIN = 0.1; // 10% padding around the detector box
+// 35% padding around the detector box (raised from 0.1, tuning 2026-07-18): a tight,
+// context-free crop is exactly when the VLM can't read a brand/model — surrounding pixels
+// (the object's ports, what it sits on/next to) materially lift identification. The MediaPipe
+// box already frames the object; the margin just gives the classifier room to reason.
+const MARGIN = 0.35;
 const MAX_SIDE = 768; // longest side of the final crop
 const JPEG_QUALITY = 0.85;
 const THUMB = 64; // grayscale thumbnail size for the sharpness metric
