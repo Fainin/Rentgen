@@ -1,3 +1,5 @@
+import { Hero } from './sections/Hero';
+
 export function App() {
-  return <h1>Rentgen</h1>;
+  return <Hero />;
 }

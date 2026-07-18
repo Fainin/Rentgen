@@ -90,3 +90,114 @@ button {
     scroll-behavior: auto !important;
   }
 }
+
+.hero {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.hero__copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 640px;
+}
+
+.hero__headline {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 600;
+}
+
+.hero__subhead {
+  color: var(--color-muted-fg);
+  font-size: 1.125rem;
+}
+
+.hero__cta {
+  align-self: flex-start;
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.hero__stage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .hero__stage {
+    flex-direction: row-reverse;
+    align-items: center;
+  }
+}
+
+.xray-reveal {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-muted-border);
+  touch-action: none;
+  user-select: none;
+}
+
+@media (min-width: 768px) {
+  .xray-reveal {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+.xray-reveal__before,
+.xray-reveal__after {
+  position: absolute;
+  inset: 0;
+}
+
+.xray-reveal__before {
+  background: var(--color-card);
+}
+
+.xray-reveal__after {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.16), rgba(34, 197, 94, 0.04));
+}
+
+.hero__layer-fill {
+  position: absolute;
+  inset: 0;
+}
+
+.xray-reveal__line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-accent);
+  box-shadow: 0 0 12px var(--color-accent);
+  transform: translateX(-50%);
+}
+
+.xray-reveal__handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  cursor: ew-resize;
+}
