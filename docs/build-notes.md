@@ -26,6 +26,15 @@ RentgenClient.scanFrames skips enrichment for detected names already in the inve
 Testing gotcha: wmux eval round-trips are ~1–2 s, so "N frames in 5 s" timing reads are
 misleading — use an in-page recorder (setInterval into a window array) for UI timelines.
 
+## Perceived-speed pass: two-stage chips + smaller frames (2026-07-18 ~19:15)
+`scan:detected` bus event (sanctioned additive edit): RentgenClient emits it right after
+detection with the DetectedObject[] — the app shows a NAMED "provisional" chip (dashed,
+pulsing) the moment Gemini answers (~2 s), then scan:complete swaps it for the priced
+item. Ghost chips now only cover chunks whose detection hasn't answered
+(ghosts = starts − detecteds − completes, clamped). Frames-mode capture dropped
+1280/q0.8 → 1024/q0.7: Gemini tiles at 768 px internally so >1024 px is wasted upload;
+roughly halves per-chunk payload (real phones ~200 KB → ~100 KB per frame).
+
 ## Tavily browser CORS: WORKS — no fallback needed
 Smoke-tested 2026-07-18 (before any enrichment polish, per design §9): OPTIONS preflight
 from `Origin: http://localhost:5173` → 200 with `access-control-allow-origin` echoed;

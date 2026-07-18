@@ -123,6 +123,8 @@ export class RentgenClient {
     const knownNames = new Set(this.currentItems.map((i) => i.name.trim().toLowerCase()));
     const objects = detected.filter((o) => !knownNames.has(o.name.trim().toLowerCase()));
     if (objects.length === 0) return this.compile([], imageHash);
+    // Names are known now (Gemini's guess), prices aren't — show the find immediately.
+    emit('scan:detected', { objects });
 
     const settled = await Promise.allSettled(
       objects.map((object) => this.enrichment.enrich(object)),
@@ -171,6 +173,8 @@ export class RentgenClient {
 
     const objects = await this.detection.detect(imageBase64);
     if (objects.length === 0) return this.compile([], imageHash);
+    // Names are known now, prices aren't — let hosts show the find immediately.
+    emit('scan:detected', { objects });
 
     const settled = await Promise.allSettled(
       objects.map((object) => this.enrichment.enrich(object)),

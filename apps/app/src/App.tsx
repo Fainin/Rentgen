@@ -96,14 +96,21 @@ function Onboarding({ onStart }: { onStart: () => void }) {
 
 const MAX_SCAN_FRAMES = 10; // mirrors the scanner's 15 s cap (10 frames · 1.5 s)
 
+interface ProvisionalItem {
+  readonly name: string;
+  readonly category: string;
+}
+
 function ScanStage({
   captured,
+  provisional,
   frameCount,
   pending,
   analyzing,
   onStop,
 }: {
   captured: readonly EnrichedItem[];
+  provisional: readonly ProvisionalItem[];
   frameCount: number;
   pending: number;
   analyzing: boolean;
@@ -154,7 +161,13 @@ function ScanStage({
                 Identifying…
               </span>
             ))}
-            {n === 0 && pending === 0 ? (
+            {provisional.map((item) => (
+              <span className="chip provisional" key={`prov-${item.name}`}>
+                <span className="icon">{CATEGORY_ICON[item.category] ?? '📦'}</span>
+                {item.name}
+              </span>
+            ))}
+            {n === 0 && pending === 0 && provisional.length === 0 ? (
               <span className="hint">Film everything worth money, then stop.</span>
             ) : (
               newestFirst.map((item) => (
@@ -184,25 +197,46 @@ function ScanStage({
 export function App() {
   const [phase, setPhase] = useState<Phase>('onboarding');
   const [captured, setCaptured] = useState<readonly EnrichedItem[]>([]);
+  const [provisional, setProvisional] = useState<readonly ProvisionalItem[]>([]);
   const [frameCount, setFrameCount] = useState(0);
   const [pending, setPending] = useState(0);
+  const [detectedPending, setDetectedPending] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
   const stoppingRef = useRef(false);
 
   // Pipelined frame flow: the scanner streams keyframe chunks to the model WHILE
-  // filming — scan:start/complete drive the live ghost/named chips — and finishFrames()
-  // resolves once every chunk is in, so stop usually only waits for the tail chunk.
+  // filming. Two-stage feedback: scan:detected shows the NAMED find the moment the
+  // vision model answers (provisional chip); scan:complete swaps it for the priced
+  // item. Ghost chips cover only chunks whose detection hasn't answered yet.
   useEffect(() => {
     const onFrames = (event: Event) =>
       setFrameCount((event as CustomEvent<{ count: number }>).detail.count);
     window.addEventListener('rentgen-frames', onFrames);
     const offs = [
       on('scan:start', () => setPending((p) => p + 1)),
+      on('scan:detected', ({ objects }) => {
+        setDetectedPending((d) => d + 1);
+        setProvisional((prev) => {
+          const have = new Set(prev.map((p) => p.name.toLowerCase()));
+          const fresh = objects.filter((o) => !have.has(o.name.toLowerCase()));
+          return [
+            ...fresh.map((o) => ({ name: o.name, category: o.category })),
+            ...prev,
+          ];
+        });
+      }),
       on('scan:complete', (result) => {
         setCaptured(result.items);
+        const priced = new Set(result.items.map((i) => i.name.trim().toLowerCase()));
+        setProvisional((prev) => prev.filter((p) => !priced.has(p.name.trim().toLowerCase())));
         setPending((p) => Math.max(0, p - 1));
+        setDetectedPending((d) => Math.max(0, d - 1));
       }),
-      on('scan:error', () => setPending((p) => Math.max(0, p - 1))),
+      on('scan:error', () => {
+        setPending((p) => Math.max(0, p - 1));
+        setDetectedPending((d) => Math.max(0, d - 1));
+        setProvisional([]); // failed chunk — don't leave orphaned name chips
+      }),
     ];
     return () => {
       window.removeEventListener('rentgen-frames', onFrames);
@@ -256,8 +290,9 @@ export function App() {
       {phase === 'scanning' && (
         <ScanStage
           captured={captured}
+          provisional={provisional}
           frameCount={frameCount}
-          pending={pending}
+          pending={Math.max(0, pending - detectedPending)}
           analyzing={analyzing}
           onStop={onStop}
         />

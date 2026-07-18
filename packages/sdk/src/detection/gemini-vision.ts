@@ -16,6 +16,13 @@ import { CATEGORIES } from './openai-vision.js';
 const GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 /** Latest Flash, thinking disabled — measured ~1.8 s for a 2-frame batch. */
 const DEFAULT_MODEL = 'gemini-flash-latest';
+/**
+ * Rate-limit fallback: chunked scanning sends ~4 requests per 15 s pan, which can trip
+ * the per-minute quota (saw a live 429 burst). Lite has its OWN quota bucket and is
+ * faster, so it makes a perfect pressure valve.
+ */
+const FALLBACK_MODEL = 'gemini-flash-lite-latest';
+const RETRY_DELAY_MS = 2000;
 const DEFAULT_MIN_CONFIDENCE = 0.45;
 const MAX_ITEMS = 12;
 const NAME_MAX_LEN = 80;
@@ -178,11 +185,42 @@ function parseResponseText(
   return validated;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * 429 ladder: retry the same model once after a short pause; if still throttled, hop to
+ * the fallback model (separate per-model quota). Anything else fails fast.
+ */
 async function callGemini(
   frames: readonly string[],
   config: GeminiVisionConfig,
 ): Promise<string> {
   const model = config.model ?? DEFAULT_MODEL;
+  try {
+    return await callGeminiModel(frames, config, model);
+  } catch (error: unknown) {
+    if (!isRateLimit(error)) throw error;
+    await sleep(RETRY_DELAY_MS);
+    try {
+      return await callGeminiModel(frames, config, model);
+    } catch (retryError: unknown) {
+      if (!isRateLimit(retryError) || model === FALLBACK_MODEL) throw retryError;
+      console.warn(`[gemini-vision] ${model} rate-limited twice — falling back to ${FALLBACK_MODEL}`);
+      return callGeminiModel(frames, config, FALLBACK_MODEL);
+    }
+  }
+}
+
+const isRateLimit = (error: unknown): boolean =>
+  error instanceof Error && error.message.includes('status 429');
+
+async function callGeminiModel(
+  frames: readonly string[],
+  config: GeminiVisionConfig,
+  model: string,
+): Promise<string> {
   const body = {
     contents: [
       {

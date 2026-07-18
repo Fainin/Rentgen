@@ -41,7 +41,11 @@ const JPEG_QUALITY = 0.85;
 const FRAME_INTERVAL_MS = 1500;
 const MAX_FRAMES = 10;
 const FRAMES_PER_CHUNK = 3;
-const FRAME_JPEG_QUALITY = 0.8;
+// Gemini tiles images at 768 px internally — anything above ~1024 px is wasted upload.
+// 1024/q0.7 roughly halves the per-chunk payload vs 1280/q0.8 (fewer 100s of KB → faster
+// on venue wifi) with no measurable detection loss.
+const FRAME_MAX_SIDE = 1024;
+const FRAME_JPEG_QUALITY = 0.7;
 const DETECT_INTERVAL_MS = 120; // ~8 detector fps; overlay still redraws every frame.
 // A GPU delegate can initialize fine yet read blank frames forever (zero detections).
 // After this many consecutive empty inferences (~5 s) we rebuild on CPU once.
@@ -388,7 +392,7 @@ export class RentgenScanner extends LitElement {
     if (this.totalFrames >= MAX_FRAMES) return;
     const video = this.video;
     if (!video || video.videoWidth === 0) return;
-    const scale = Math.min(1, MAX_SIDE / Math.max(video.videoWidth, video.videoHeight));
+    const scale = Math.min(1, FRAME_MAX_SIDE / Math.max(video.videoWidth, video.videoHeight));
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);

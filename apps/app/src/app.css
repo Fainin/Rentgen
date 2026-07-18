@@ -335,3 +335,13 @@
   background: var(--rentgen-accent, #86efac);
   transition: width 1.5s linear;
 }
+
+/* Provisional find: name known (vision model), price still resolving. */
+.chip.provisional {
+  border-style: dashed;
+  animation: chip-pulse 1.2s ease-in-out infinite;
+}
+@keyframes chip-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
