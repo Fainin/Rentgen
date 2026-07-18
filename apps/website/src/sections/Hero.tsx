@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { XrayReveal } from '../hero/XrayReveal';
 import { RoomIllustration } from '../hero/RoomIllustration';
 import { ItemMarker } from '../hero/ItemMarker';
@@ -8,7 +8,14 @@ import { REVEAL_ITEMS } from '../hero/items';
 
 export function Hero() {
   const [reveal, setReveal] = useState(0);
-  useAutoSweep(setReveal);
+  const cancelSweep = useAutoSweep(setReveal);
+  const handleRevealChange = useCallback(
+    (value: number) => {
+      cancelSweep();
+      setReveal(value);
+    },
+    [cancelSweep],
+  );
 
   return (
     <section className="hero" aria-label="Rentgen interactive demo">
@@ -23,7 +30,7 @@ export function Hero() {
         <MoneyCounter reveal={reveal} />
         <XrayReveal
           reveal={reveal}
-          onRevealChange={setReveal}
+          onRevealChange={handleRevealChange}
           beforeContent={<RoomIllustration variant="before" />}
           afterContent={
             <>
