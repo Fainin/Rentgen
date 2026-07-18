@@ -2,6 +2,7 @@ import { Hero } from './sections/Hero';
 import { Problem } from './sections/Problem';
 import { HowItWorks } from './sections/HowItWorks';
 import { Trust } from './sections/Trust';
+import { SdkPitch } from './sections/SdkPitch';
 
 export function App() {
   return (
@@ -10,6 +11,7 @@ export function App() {
       <Problem />
       <HowItWorks />
       <Trust />
+      <SdkPitch />
     </>
   );
 }

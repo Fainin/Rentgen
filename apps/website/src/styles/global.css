@@ -349,3 +349,24 @@ button {
   color: var(--color-muted-fg);
   font-size: 1.0625rem;
 }
+
+.sdk-pitch p {
+  color: var(--color-muted-fg);
+  max-width: 720px;
+}
+
+.sdk-pitch__snippet {
+  background: var(--color-card);
+  border: 1px solid var(--color-muted-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.sdk-pitch__snippet code {
+  font-family: 'Fira Code', ui-monospace, monospace;
+  color: var(--color-fg);
+  white-space: pre;
+}
