@@ -14,9 +14,11 @@
   ],
   "scripts": {
     "dev": "npm run dev -w app",
+    "dev:website": "npm run dev -w @rentgen/website",
     "build": "npm run build -w @rentgen/sdk && npm run build -w app",
     "build:sdk": "npm run build -w @rentgen/sdk",
+    "build:website": "npm run build -w @rentgen/website",
     "typecheck": "npm run typecheck -w @rentgen/sdk && npm run typecheck -w app",
-    "deploy": "npm run build && npx -y vercel link --yes --project rentgen --cwd apps/app/dist && npx -y vercel deploy --prod --yes --cwd apps/app/dist"
+    "typecheck:website": "npm run typecheck -w @rentgen/website"
   }
 }
