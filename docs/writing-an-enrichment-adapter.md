@@ -1,3 +1,97 @@
+# Writing an EnrichmentAdapter
+
+How to implement a data-enrichment adapter for `@rentgen/sdk` — the seam that turns a
+detected object into a *priced* item with real sources. The second half of this doc is a
+complete, battle-tested example: the Tavily-comps adapter that shipped during the
+hackathon (removed from the SDK on 2026-07-20; this doc is now its canonical home).
+
+## The contract
+
+An enrichment adapter implements one interface (`packages/sdk/src/adapters/types.ts`):
+
+```ts
+export interface EnrichmentAdapter {
+  enrich(object: DetectedObject): Promise<EnrichedItem>;
+}
+```
+
+Input: a `DetectedObject` (name, category, condition, …) from the detection stage.
+Output: an `EnrichedItem` — the same object plus:
+
+- `resale: PriceRange` — used-market value band (`{ min, max, currency }`). Its midpoint
+  drives `totalIdleValue`, so it must be a *real* signal, never a guess.
+- `rentPerDay: PriceRange` — daily rental band.
+- `sources: Source[]` — `{ title, url }` links backing the prices. At least one.
+
+Rules the rest of the SDK relies on (see `packages/sdk/src/types.ts` for the frozen
+shapes):
+
+1. **Throw on failure — never fabricate.** If you can't ground a price, throw with a
+   descriptive message. `RentgenClient` catches per-item and surfaces `scan:error`;
+   a wrong-but-confident price is worse than a missing item.
+2. **Immutability.** Spread the input object into the result (`{ ...object, resale, … }`);
+   never mutate what you received.
+3. **Timeouts on every fetch.** A hung request must never hang the scan
+   (`AbortSignal.timeout(...)`).
+4. **Keep internal shapes private.** API response types, prompts, payloads stay inside
+   your adapter file. Only the `EnrichmentAdapter` interface crosses the seam.
+5. **Framework-agnostic.** Never read `import.meta.env` — API keys arrive through your
+   adapter's config, passed by the host app via `configureRentgen`.
+
+## Registering an adapter
+
+Two options:
+
+**A. The escape hatch (no SDK changes):** hand a ready instance to `configureRentgen`:
+
+```ts
+import { configureRentgen } from '@rentgen/sdk';
+
+configureRentgen({
+  adapters: {
+    enrichment: createMyCompsEnrichmentAdapter({ apiKey: '…' }),
+  },
+});
+```
+
+**B. As an SDK default:** add your file under `packages/sdk/src/enrichment/`, then branch
+on config in `enrichment/index.ts`'s `createEnrichmentAdapter()` factory — return the real
+adapter when its keys are present, the offline stub otherwise. That keeps the app working
+end-to-end with no keys.
+
+## Worked example: Tavily comps → OpenAI reconcile
+
+The adapter below priced items against **live web comps**: two parallel Tavily searches
+(resale listings, rental listings) → one OpenAI JSON-mode call that reconciles *only those
+results* into price bands → validation/clamping → `EnrichedItem` whose `sources` are the
+actual Tavily result URLs.
+
+Design points worth stealing:
+
+- **Grounding is one-directional.** The reconcile prompt explicitly forbids the model from
+  pricing off its training-data priors. Search results in, reconciled bands out; if the
+  comps don't support a price, the model must return `{min: 0, max: 0}` and the adapter
+  throws rather than inventing a number.
+- **Query building matters.** The resale query includes the category as a disambiguator
+  ("Sony a7 III" also matches Audi A7 car parts) and pins marketplaces
+  (`site:ebay.de OR site:kleinanzeigen.de`).
+- **Transport swap point.** All Tavily traffic goes through one `search()` function — if
+  browser CORS were ever blocked, only that function's fetch target changes. (It wasn't:
+  direct browser calls to `api.tavily.com` worked, confirmed hour-1.)
+- **Structured output + defensive parse.** OpenAI is called with a strict
+  `response_format: json_schema`, and the payload is *still* shape-checked by hand, with
+  one "JSON only" retry on malformed output.
+- **Sanity guards over trust.** Rent is clamped against resale (a rent midpoint above
+  10 %/day of the resale midpoint means the rental comps matched a different product
+  class); missing/implausible rental comps fall back to a 1.5–3 %/day band derived from
+  the resale midpoint.
+- **Sources are verifiable.** Only URLs that literally appear in Tavily's results are
+  emitted; if the model cites nothing usable, the top raw comps are used as fallback
+  sources; zero citable sources ⇒ throw.
+
+Full source (as last shipped, `packages/sdk/src/enrichment/tavily-comps.ts`):
+
+```ts
 /**
  * Real EnrichmentAdapter: Tavily search (resale + rental comps) → OpenAI reconcile.
  *
@@ -112,6 +206,8 @@ interface ReconcileRange {
 interface ReconcilePayload {
   readonly resale: ReconcileRange;
   readonly rentPerDay: ReconcileRange;
+  /** Brand-new / retail price extracted from the comps, if any snippet states one; else {0,0}. */
+  readonly retail: ReconcileRange;
   readonly resaleSourceUrls: readonly string[];
   readonly rentalSourceUrls: readonly string[];
 }
@@ -137,10 +233,16 @@ const RECONCILE_JSON_SCHEMA = {
         required: ['min', 'max'],
         additionalProperties: false,
       },
+      retail: {
+        type: 'object',
+        properties: { min: { type: 'number' }, max: { type: 'number' } },
+        required: ['min', 'max'],
+        additionalProperties: false,
+      },
       resaleSourceUrls: { type: 'array', items: { type: 'string' } },
       rentalSourceUrls: { type: 'array', items: { type: 'string' } },
     },
-    required: ['resale', 'rentPerDay', 'resaleSourceUrls', 'rentalSourceUrls'],
+    required: ['resale', 'rentPerDay', 'retail', 'resaleSourceUrls', 'rentalSourceUrls'],
     additionalProperties: false,
   },
 } as const;
@@ -162,6 +264,9 @@ const SYSTEM_PROMPT = [
   '{"min":0,"max":0} for resale. If the rental comps do not support a usable price, return',
   '{"min":0,"max":0} for rentPerDay — do not estimate a rental price yourself under any',
   'circumstance.',
+  'Separately, if any snippet states this item\'s brand-new / retail (MSRP) price, report it in',
+  '"retail" as {min,max} — this is the ONE field where a brand-new price is wanted. If no',
+  'snippet mentions a new/retail price, return {"min":0,"max":0} for retail (do not invent one).',
   'Return the exact URLs (verbatim, copied from the provided list) of the comps you actually',
   'relied on for each band in resaleSourceUrls / rentalSourceUrls. Respond with JSON only,',
   'matching the given schema.',
@@ -218,6 +323,7 @@ function parseReconcilePayload(raw: string): ReconcilePayload {
     !isPlainRecord(json) ||
     !isReconcileRange(json.resale) ||
     !isReconcileRange(json.rentPerDay) ||
+    !isReconcileRange(json.retail) ||
     !isStringArray(json.resaleSourceUrls) ||
     !isStringArray(json.rentalSourceUrls)
   ) {
@@ -226,6 +332,7 @@ function parseReconcilePayload(raw: string): ReconcilePayload {
   return {
     resale: json.resale,
     rentPerDay: json.rentPerDay,
+    retail: json.retail,
     resaleSourceUrls: json.resaleSourceUrls,
     rentalSourceUrls: json.rentalSourceUrls,
   };
@@ -463,12 +570,27 @@ export function createTavilyCompsEnrichmentAdapter(config: TavilyCompsConfig): E
         throw new Error(`Price reconcile: degenerate rent range for "${object.name}"`);
       }
 
+      // "Tavily refines": when the comps actually stated a brand-new price, prefer that
+      // grounded retail number; otherwise keep the vision model's estimate (carried by
+      // ...object). Never downgrade a present estimate to nothing.
+      const groundedRetail = !isUnusableRange(payload.retail)
+        ? clampRange(payload.retail.min, payload.retail.max, currency)
+        : undefined;
+
       return {
         ...object,
         resale: resaleRange,
         rentPerDay: rentPerDayRange,
         sources: finalSources,
+        ...(groundedRetail ? { estimatedRetail: groundedRetail } : {}),
       };
     },
   };
 }
+```
+
+To reinstate it: drop the code above back into
+`packages/sdk/src/enrichment/tavily-comps.ts`, re-add the `tavilyApiKey` branch in
+`enrichment/index.ts` (real adapter iff both keys present, stub otherwise), and thread
+`tavilyApiKey` back through `RentgenConfig` → `createEnrichmentAdapter` and the app's
+`VITE_TAVILY_API_KEY` env plumbing.

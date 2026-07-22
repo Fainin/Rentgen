@@ -27,7 +27,8 @@ export interface DetectionAdapter {
 
 /**
  * Prices one detected object against live comps → resale + rent/day + sources.
- * Default implementation: tavily-comps (Tavily search → OpenAI reconcile).
+ * Default implementation: the offline stub. A worked real-world example
+ * (Tavily search → OpenAI reconcile) is in docs/writing-an-enrichment-adapter.md.
  */
 export interface EnrichmentAdapter {
   enrich(object: DetectedObject): Promise<EnrichedItem>;

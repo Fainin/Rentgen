@@ -22,7 +22,7 @@ Point a phone at your stuff → an agent identifies each item, prices its **resa
 Two npm-workspace packages, zero backend:
 
 - **`packages/sdk` (`@rentgen/sdk`)** — the reusable core:
-  - `adapters/` — the **plugin surface**. `DetectionAdapter` (photo → objects), `EnrichmentAdapter` (object → priced item + sources), `AssetAdapter` (Phase 3). Defaults: `openai-vision`, `tavily-comps`. `stub.ts` powers the offline demo.
+  - `adapters/` — the **plugin surface**. `DetectionAdapter` (photo → objects), `EnrichmentAdapter` (object → priced item + sources), `AssetAdapter` (Phase 3). Detection default: `openai-vision`/`gemini-vision`; enrichment ships stub-only (the real Tavily-comps adapter was removed post-event — worked example in `docs/writing-an-enrichment-adapter.md`). `stub.ts` powers the offline demo.
   - `client/RentgenClient.ts` — orchestrates `scan()`: cache → detect → enrich (parallel) → total → persist. Also `consume(sessionId)`.
   - `storage/sessionStore.ts` — `localStorage` wrapper + image-hash cache.
   - `widgets/` — Lit custom elements `<rentgen-scanner>` / `<rentgen-results>`; they coordinate via the `events.ts` bus. Theme with CSS custom properties only.
@@ -60,7 +60,7 @@ npm run build          # SDK (tsup → dist) + app
 
 ## Known gotchas / risks
 
-- **Tavily browser CORS (test hour 1, not demo day).** Direct browser calls may be blocked. If so, only swap the *transport* inside `tavily-comps.ts` — the interface hides where the call runs, so nothing else moves.
+- **Tavily browser CORS** — historical: the tavily-comps adapter was removed post-event (see `docs/writing-an-enrichment-adapter.md`). Direct browser calls to Tavily were confirmed working; the transport-swap note lives in that doc.
 - **API keys are in the browser bundle** — a deliberate, demo-scoped trade-off. Rotate after the event. For a shipped product, move `adapters/*` behind a thin server; the rest is unchanged.
 - **No automated tests** — deliberate hackathon scope cut. Smoke-test on real venue objects; keep a recorded fallback video.
 

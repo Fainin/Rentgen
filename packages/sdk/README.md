@@ -12,8 +12,7 @@ web sources → an idle-capital total adds up.
 import { configureRentgen } from '@rentgen/sdk'; // importing registers the widgets
 
 configureRentgen({
-  openaiApiKey: '…', // omit both keys → deterministic offline stub adapters
-  tavilyApiKey: '…',
+  openaiApiKey: '…', // omit the key → deterministic offline stub adapters
   currency: 'EUR',
 });
 ```
@@ -59,7 +58,6 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     configureRentgen({
       openaiApiKey: environment.openaiApiKey,
-      tavilyApiKey: environment.tavilyApiKey,
       currency: 'EUR',
       asset: {
         auth: { isAuthenticated: true, user: { id: 'user-123' } },
@@ -97,8 +95,10 @@ root (serve over http — camera needs HTTPS or localhost).
 
 - `DetectionAdapter.detect(imageBase64) → DetectedObject[]` — default: OpenAI vision
   (gpt-4o, strict JSON schema). Stub without a key.
-- `EnrichmentAdapter.enrich(object) → EnrichedItem` — default: Tavily comps (two parallel
-  searches) → OpenAI reconcile → grounded price ranges + real source links. Stub without keys.
+- `EnrichmentAdapter.enrich(object) → EnrichedItem` — default: deterministic offline stub.
+  A worked real-world implementation (Tavily comps → OpenAI reconcile → grounded price
+  ranges + real source links) is documented in
+  [`docs/writing-an-enrichment-adapter.md`](../../docs/writing-an-enrichment-adapter.md).
 - `AssetAdapter.render(session) → ExportBundle` — turns a scan into generic, ready-to-list
   listing drafts. Your marketplace maps + uploads them via your own `UploadAdapter`
   (registered through `configureRentgen({ asset: { uploader } })`). Nothing

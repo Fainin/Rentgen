@@ -16,7 +16,6 @@ export interface RentgenConfig {
   readonly openaiApiKey?: string;
   /** Preferred detection backend: Gemini, incl. whole-video frame batches. */
   readonly geminiApiKey?: string;
-  readonly tavilyApiKey?: string;
   readonly currency?: string;
   /** Vision model override for the detection adapter (default 'gpt-4.1'). */
   readonly detectionModel?: string;
@@ -52,12 +51,7 @@ export function configureRentgen(config: RentgenConfig): RentgenClient {
       hints: config.detectionHints,
     });
   const enrichment =
-    config.adapters?.enrichment ??
-    createEnrichmentAdapter({
-      tavilyApiKey: config.tavilyApiKey,
-      openaiApiKey: config.openaiApiKey,
-      currency,
-    });
+    config.adapters?.enrichment ?? createEnrichmentAdapter({ currency });
   assetAdapter =
     config.adapters?.asset ?? createAssetAdapter(config.asset as never) ?? null;
   client = new RentgenClient({ detection, enrichment, currency });

@@ -11,11 +11,8 @@ import { moneyBurst, pling } from './celebrate.js';
 import './app.css';
 
 // `?stub=1` forces the offline stub adapters — the recorded-fallback / no-wifi demo path.
-// `?notavily=1` keeps REAL vision but stubs the pricing (both keys are required for real
-// enrichment) — cheap detection testing without burning Tavily/reconcile tokens.
 const params = new URLSearchParams(window.location.search);
 const stubMode = params.has('stub');
-const noTavily = params.has('notavily');
 
 // Rehearsed demo inventory — steadies naming for the products we actually bring on stage.
 // Edit freely; remove entries for a "cold" unknown-room demo.
@@ -27,11 +24,11 @@ const DEMO_HINTS = [
 ];
 
 configureRentgen({
-  // Gemini drives detection (frame-batch capable — required by the scanner's frames mode);
-  // the OpenAI key stays for the enrichment reconcile step.
+  // Gemini drives detection (frame-batch capable — required by the scanner's frames mode).
+  // Enrichment runs on the built-in stub — see docs/writing-an-enrichment-adapter.md for
+  // wiring a real pricing adapter.
   geminiApiKey: stubMode ? undefined : import.meta.env.VITE_GEMINI_API_KEY,
   openaiApiKey: stubMode ? undefined : import.meta.env.VITE_OPENAI_API_KEY,
-  tavilyApiKey: stubMode || noTavily ? undefined : import.meta.env.VITE_TAVILY_API_KEY,
   detectionHints: DEMO_HINTS,
   currency: 'EUR',
   asset: {

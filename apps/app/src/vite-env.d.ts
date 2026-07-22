@@ -15,7 +15,6 @@ declare module 'react' {
 
 interface ImportMetaEnv {
   readonly VITE_OPENAI_API_KEY?: string;
-  readonly VITE_TAVILY_API_KEY?: string;
 }
 
 interface ImportMeta {

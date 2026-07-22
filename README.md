@@ -9,10 +9,12 @@
 
 SDK-first, fully client-side, **zero backend**. The value chain ships as a reusable package (`@rentgen/sdk`); a thin React app (`apps/app`) just launches it.
 
-> **STATUS: working end-to-end.** Tap-to-capture *and* live-pan scanning → OpenAI vision
-> classification → Tavily-grounded pricing with real source links → idle-capital total →
-> per-item selection → generic listing-export bundle. Runs fully offline on stub adapters
-> (`?stub=1`) or live with keys. See `docs/build-notes.md` for lessons learned.
+> **STATUS: working end-to-end.** Tap-to-capture *and* live-pan scanning → vision
+> classification → stub pricing → idle-capital total → per-item selection → generic
+> listing-export bundle. Runs fully offline on stub adapters (`?stub=1`) or with live
+> detection keys. The live Tavily-grounded pricing adapter was removed post-event; it
+> survives as a worked example in `docs/writing-an-enrichment-adapter.md`. See
+> `docs/build-notes.md` for lessons learned.
 
 ## Quickstart
 
@@ -35,7 +37,6 @@ cp apps/app/.env.example apps/app/.env   # then fill in the keys
 
 ```
 VITE_OPENAI_API_KEY=sk-…
-VITE_TAVILY_API_KEY=tvly-…
 ```
 
 Keys are demo-scoped and **rotated after the event** — never commit `.env`.
