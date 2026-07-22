@@ -12,9 +12,8 @@ SDK-first, fully client-side, **zero backend**. The value chain ships as a reusa
 > **STATUS: working end-to-end.** Tap-to-capture *and* live-pan scanning → vision
 > classification → stub pricing → idle-capital total → per-item selection → generic
 > listing-export bundle. Runs fully offline on stub adapters (`?stub=1`) or with live
-> detection keys. The live Tavily-grounded pricing adapter was removed post-event; it
-> survives as a worked example in `docs/writing-an-enrichment-adapter.md`. See
-> `docs/build-notes.md` for lessons learned.
+> detection keys. Pricing ships stub-only — a full real-world enrichment adapter is
+> documented in `docs/writing-an-enrichment-adapter.md`.
 
 ## Quickstart
 
@@ -64,10 +63,7 @@ CLAUDE.md       instructions for Claude Code working in this repo
 - **[`packages/sdk/README.md`](packages/sdk/README.md)** — how to embed the widgets and write adapters.
 - **[`docs/brand/`](docs/brand/README.md)** — logo (SVG master + PNG), palette, export how-to.
 
-## Build order (phases are a firewall)
+## Spec
 
-1. **Phase 1 (PoC):** tap → priced items → total, end-to-end. ← *build this first*
-2. **Phase 2:** live pan with an in-browser detector — only once Phase 1 demos cleanly.
-3. **Phase 3 (stretch):** cognee memory, shareable report card.
-
-Don't start a phase until the previous one demos cleanly. See `docs/specs/`.
+The single simplified spec — features, architecture, and the stable contracts — lives at
+[`docs/spec.md`](docs/spec.md).

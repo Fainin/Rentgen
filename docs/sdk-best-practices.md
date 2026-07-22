@@ -1,6 +1,6 @@
 # SDK Design & Documentation — Best Practices for Rentgen
 
-> Distilled from a multi-source, adversarially-verified research pass (2026-07-18): 22 sources fetched, 105 claims extracted, 25 fact-checked with 3-vote verification (a claim needed ≥2/3 to survive). This file captures **what survived** and **what got killed**, framed as guidance for `@rentgen/sdk`. The authoritative design lives in [`specs/2026-07-18-rentgen-sdk-design.md`](specs/2026-07-18-rentgen-sdk-design.md); this is the *rationale layer* behind its architecture choices.
+> Distilled from a multi-source, adversarially-verified research pass (2026-07-18): 22 sources fetched, 105 claims extracted, 25 fact-checked with 3-vote verification (a claim needed ≥2/3 to survive). This file captures **what survived** and **what got killed**, framed as guidance for `@rentgen/sdk`. The current spec lives in [`spec.md`](spec.md); this is the *rationale layer* behind its architecture choices.
 
 **Confidence legend:** 🟢 high (primary vendor/spec source, 3-0 vote) · 🟡 medium (canonical principle, blog-sourced or with a caveat).
 

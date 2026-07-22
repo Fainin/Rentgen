@@ -48,7 +48,7 @@ export type {
 
 // Widgets — explicit side-effect imports so registration survives production
 // tree-shaking (a bare re-export chain through a pure barrel gets dropped when the
-// class binding is unused; this exact bug shipped once — see build-notes).
+// class binding is unused; this exact bug shipped once).
 import './capture/rentgen-scanner.js';
 import './results/rentgen-results.js';
 import './upsell/rentgen-upsell.js';
