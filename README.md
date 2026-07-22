@@ -1,5 +1,7 @@
 # Rentgen
 
+<img src="docs/brand/rentgen-xray-box-1024.png" width="96" align="right" alt="Rentgen logo — X-rayed box revealing a green €">
+
 > **Point your phone at your stuff → an agent identifies each item, prices its resale + rent/day against live web comps → an idle-capital total adds up.**
 > Ends on: *"You're sitting on €4,200 doing nothing."* 🎤
 
@@ -7,7 +9,12 @@
 
 SDK-first, fully client-side, **zero backend**. The value chain ships as a reusable package (`@rentgen/sdk`); a thin React app (`apps/app`) just launches it.
 
-> **STATUS: bare scaffold.** Monorepo, tooling, docs, and the locked SDK **contracts** (`packages/sdk/src/types.ts`, `adapters/types.ts`) are in place. The implementation — adapters, client, widgets, app wiring — is what the team builds. See `CLAUDE.md`.
+> **STATUS: working end-to-end.** Tap-to-capture *and* live-pan scanning → vision
+> classification → stub pricing → idle-capital total → per-item selection → generic
+> listing-export bundle. Runs fully offline on stub adapters (`?stub=1`) or with live
+> detection keys. The live Tavily-grounded pricing adapter was removed post-event; it
+> survives as a worked example in `docs/writing-an-enrichment-adapter.md`. See
+> `docs/build-notes.md` for lessons learned.
 
 ## Quickstart
 
@@ -17,7 +24,10 @@ npm run dev          # boots the app shell on http://localhost:5173
 npm run typecheck    # type-checks both workspaces
 ```
 
-Right now the app is just a headline shell — start filling in `packages/sdk` against the contracts, then mount the widgets in `apps/app`.
+The app boots with camera capture + results + export bar wired. Append `?stub=1` to the
+URL to force the offline stub adapters (no keys, no network — the demo-safe path).
+Portability proof: `examples/plain-html/` mounts the same widgets from the built SDK with
+zero framework; the Angular recipe is in `packages/sdk/README.md`.
 
 ### API keys (when you wire up the real adapters)
 
@@ -27,7 +37,6 @@ cp apps/app/.env.example apps/app/.env   # then fill in the keys
 
 ```
 VITE_OPENAI_API_KEY=sk-…
-VITE_TAVILY_API_KEY=tvly-…
 ```
 
 Keys are demo-scoped and **rotated after the event** — never commit `.env`.
@@ -53,6 +62,7 @@ CLAUDE.md       instructions for Claude Code working in this repo
 
 - **[`docs/`](docs/README.md)** — the design, demo script, build order, team split.
 - **[`packages/sdk/README.md`](packages/sdk/README.md)** — how to embed the widgets and write adapters.
+- **[`docs/brand/`](docs/brand/README.md)** — logo (SVG master + PNG), palette, export how-to.
 
 ## Build order (phases are a firewall)
 

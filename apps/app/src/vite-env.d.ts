@@ -15,9 +15,14 @@ declare module 'react' {
 
 interface ImportMetaEnv {
   readonly VITE_OPENAI_API_KEY?: string;
-  readonly VITE_TAVILY_API_KEY?: string;
 }
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
+}
+
+// Injected by Vite `define` (see vite.config.ts) — a unique id per build, used to
+// version the service worker URL so new deploys are detected and installed fast.
+declare global {
+  const __BUILD_ID__: string;
 }

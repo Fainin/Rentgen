@@ -71,7 +71,8 @@ build against it in parallel and you swap their real modules in as they land —
 
 - `totalIdleValue` = **Σ of each item's resale midpoint** `(min+max)/2`. Single currency
   (`EUR`). This is the frozen total contract.
-- `RentgenClient` **awaits enrichments with `Promise.all`** (parallel, one call per object).
+- `RentgenClient` **awaits enrichments in parallel with `Promise.allSettled`** (one call per
+  object; a single item failing is dropped, only all-items-failing fails the scan).
 - The **event bus is the only widget↔widget channel.** Results subscribes to
   `scan:complete`; it never imports the scanner or the client internals.
 - Provide a **named slot / mount point** at the **bottom of `<rentgen-results>`** for Stream

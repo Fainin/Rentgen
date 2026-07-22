@@ -1,55 +1,128 @@
 # @rentgen/sdk
 
 The reusable core of Rentgen: the value chain (**detect → enrich → price → total**) plus
-two drop-in Web Component widgets. Framework-agnostic, fully client-side, no backend.
+drop-in Web Component widgets. Framework-agnostic, fully client-side, no backend.
 
-> **STATUS: contracts only.** The domain types (`src/types.ts`) and the adapter plugin
-> interfaces (`src/adapters/types.ts`) are locked so the team can build against a stable
-> API. Everything below describes the **target** design — implementations are TODO.
+Point a camera at your stuff → each item gets a grounded resale + rent-per-day price with
+web sources → an idle-capital total adds up.
 
-## What exists today
+## Quick start
 
-- `src/types.ts` — `PriceRange`, `Source`, `DetectedObject`, `EnrichedItem`, `ScanResult`,
-  `Session`, `Asset`.
-- `src/adapters/types.ts` — the plugin surface: `DetectionAdapter`, `EnrichmentAdapter`,
-  `AssetAdapter`.
-- `src/index.ts` — re-exports the above (types only).
+```ts
+import { configureRentgen } from '@rentgen/sdk'; // importing registers the widgets
 
-## To build (see CLAUDE.md for the full architecture)
+configureRentgen({
+  openaiApiKey: '…', // omit the key → deterministic offline stub adapters
+  currency: 'EUR',
+});
+```
 
-- `adapters/` — `openai-vision` (`DetectionAdapter`), `tavily-comps` (`EnrichmentAdapter`),
-  and a `stub` pair for the offline demo.
-- `client/RentgenClient.ts` — orchestrate `scan()`: cache → detect → enrich (parallel) →
-  total → persist; plus `consume(sessionId)`.
-- `storage/sessionStore.ts` — localStorage wrapper + image-hash cache.
-- `widgets/` — Lit custom elements `<rentgen-scanner>` / `<rentgen-results>`.
-- `config.ts` — `configureRentgen()` / `getClient()` singleton.
+```html
+<rentgen-scanner></rentgen-scanner>
+<rentgen-results>
+  <rentgen-upsell></rentgen-upsell>
+</rentgen-results>
+```
 
-## Target API (once implemented)
+That's the whole integration: standard Custom Elements, coordinated over an internal
+event bus (`scan:start` → `scan:complete` / `scan:error`, `selection:change`). No props,
+no framework bindings required.
 
-Standard Custom Elements, usable from **React, Angular, or plain HTML**:
+## Using from React (19+)
+
+React 19 renders custom elements natively — see `apps/app` in this repo for the full
+working example. Import the SDK once, call `configureRentgen`, use the tags in JSX.
+
+## Using from Angular
+
+Custom elements need `CUSTOM_ELEMENTS_SCHEMA` so the template compiler accepts unknown
+tags:
+
+```ts
+// app.component.ts (standalone component)
+import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit } from '@angular/core';
+import { configureRentgen } from '@rentgen/sdk'; // side effect: registers the elements
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  template: `
+    <rentgen-scanner></rentgen-scanner>
+    <rentgen-results>
+      <rentgen-upsell></rentgen-upsell>
+    </rentgen-results>
+  `,
+})
+export class AppComponent implements OnInit {
+  ngOnInit(): void {
+    configureRentgen({
+      openaiApiKey: environment.openaiApiKey,
+      currency: 'EUR',
+      asset: {
+        auth: { isAuthenticated: true, user: { id: 'user-123' } },
+        uploader: myMarketplaceUploadAdapter, // implements UploadAdapter — your code, your API
+      },
+    });
+  }
+}
+```
+
+Listening to results from the host (optional):
+
+```ts
+import { on } from '@rentgen/sdk';
+const off = on('scan:complete', (result) => console.log(result.totalIdleValue));
+```
+
+## Using from plain HTML
+
+`npm run build` emits `dist/standalone.js` with every dependency bundled:
 
 ```html
 <script type="module">
-  import { configureRentgen } from '@rentgen/sdk';
-  configureRentgen({ openaiApiKey: '…', tavilyApiKey: '…' }); // omit keys → offline mock data
+  import { configureRentgen } from './dist/standalone.js';
+  configureRentgen({});
 </script>
-
 <rentgen-scanner></rentgen-scanner>
 <rentgen-results></rentgen-results>
 ```
 
-Theming via CSS custom properties (`--rentgen-accent`, `--rentgen-card-bg`,
-`--rentgen-radius`, `--rentgen-font`). Adding a data source = implement an adapter
-interface, register it — no widget/app changes.
+Working page: [`examples/plain-html/`](../../examples/plain-html/index.html) at the repo
+root (serve over http — camera needs HTTPS or localhost).
+
+## Architecture (the plugin surface)
+
+- `DetectionAdapter.detect(imageBase64) → DetectedObject[]` — default: OpenAI vision
+  (gpt-4o, strict JSON schema). Stub without a key.
+- `EnrichmentAdapter.enrich(object) → EnrichedItem` — default: deterministic offline stub.
+  A worked real-world implementation (Tavily comps → OpenAI reconcile → grounded price
+  ranges + real source links) is documented in
+  [`docs/writing-an-enrichment-adapter.md`](../../docs/writing-an-enrichment-adapter.md).
+- `AssetAdapter.render(session) → ExportBundle` — turns a scan into generic, ready-to-list
+  listing drafts. Your marketplace maps + uploads them via your own `UploadAdapter`
+  (registered through `configureRentgen({ asset: { uploader } })`). Nothing
+  marketplace-specific ships in this SDK.
+
+Adding a data source = implement an adapter interface + register it via
+`configureRentgen({ adapters: { … } })`. No widget or app changes.
+
+## Theming
+
+CSS custom properties only — never reach into widget internals:
+`--rentgen-accent`, `--rentgen-card-bg`, `--rentgen-radius`, `--rentgen-font`.
 
 ## Scripts
 
 - `npm run typecheck` — `tsc --noEmit`.
-- `npm run build` — emit `dist/` + `.d.ts` via **tsup**.
+- `npm run build` — `dist/index.js` (+ `.d.ts`, deps external) and `dist/standalone.js`
+  (everything bundled) via tsup.
 
 ## Notes
 
-- API keys will live in the browser bundle — a deliberate, demo-scoped trade-off (design
-  doc §9). Rotate after the event.
+- API keys live in the browser bundle — a deliberate, demo-scoped trade-off (design doc
+  §9). Rotate after the event. For a shipped product, move the adapter bodies behind a
+  thin server; every interface stays the same.
 - `imageBase64` accepts a full data URL (`data:image/…;base64,…`) or a bare base64 string.
+- Camera capture needs HTTPS or localhost (`getUserMedia` restriction); the scanner falls
+  back to photo upload otherwise.

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Rentgen — plain HTML, zero framework</title>
+    <style>
+      :root {
+        --rentgen-accent: #86efac;
+        --rentgen-card-bg: #16181d;
+        --rentgen-radius: 20px;
+        --rentgen-font: system-ui, -apple-system, sans-serif;
+      }
+      body {
+        margin: 0;
+        background: #0b0c0f;
+        color: #e5e7eb;
+        font-family: var(--rentgen-font);
+      }
+      main {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 1.25rem 1rem 5rem;
+      }
+      h1 {
+        font-size: 1.8rem;
+        margin: 0;
+        color: #fff;
+      }
+      p.tag {
+        color: #9ca3af;
+        margin: 0.25rem 0 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Rentgen</h1>
+      <p class="tag">Same SDK, no framework — proof of the web-components portability bet.</p>
+      <rentgen-scanner></rentgen-scanner>
+      <div style="margin-top: 1rem">
+        <rentgen-results>
+          <rentgen-upsell></rentgen-upsell>
+        </rentgen-results>
+      </div>
+    </main>
+
+    <!--
+      Build the SDK first (`npm run build:sdk` at the repo root), then serve THIS folder's
+      parent over http, e.g. from the repo root:  npx serve .
+      → open http://localhost:3000/examples/plain-html/
+      No keys here → the SDK runs its offline stub adapters. To go live, call
+      configureRentgen({ openaiApiKey }) before scanning.
+    -->
+    <script type="module">
+      import { configureRentgen } from '../../packages/sdk/dist/standalone.js';
+      configureRentgen({}); // stub-backed — swap in real keys to go live
+    </script>
+  </body>
+</html>

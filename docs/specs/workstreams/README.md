@@ -41,9 +41,13 @@ These are the only cross-stream contracts. **Changing anything here is a team de
 hour 1.
 
 **Domain types** — `packages/sdk/src/types.ts` (exists):
-`PriceRange`, `Source`, `DetectedObject`, `EnrichedItem`, `ScanResult`, `Session`, `Asset`.
+`PriceRange`, `Source`, `BoundingBox`, `DetectedObject`, `EnrichedItem`, `ScanResult`,
+`Session`, `Asset`.
 - `EnrichedItem.image?: string` — optional item photo (data URL): the scan image persisted per
   item. Read by `<rentgen-results>` and Stream 5's `photoProvider`. (Added by S4 — handoff #2.)
+- `DetectedObject.box?: BoundingBox` — optional normalized (0..1) location of the object in the
+  scanned image; S2 emits it, S4 uses it to crop a per-item card photo. (Added 2026-07-18 —
+  adjacent products were sharing one image.)
 
 **Adapter interfaces** — `packages/sdk/src/adapters/types.ts` (exists):
 `DetectionAdapter.detect(imageBase64) → DetectedObject[]`,

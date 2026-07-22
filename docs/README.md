@@ -10,6 +10,7 @@ Shared context so anyone (human or Claude Code) can get up to speed fast. Read `
 | [`specs/workstreams/`](specs/workstreams/README.md) | **The 5 parallel sub-projects** (detect → classify → price → compile → upsell): per-owner specs, disjoint file ownership, the frozen seam registry, and the merge-conflict rules. | **Before you start coding** — read the README + your own stream. |
 | [`sdk-best-practices.md`](sdk-best-practices.md) | **The rationale layer.** Verified research digest behind the design: ports & adapters, configure-once, deep-merge defaults, Lit + `@lit/react`, the SemVer stability allowlist — plus anti-patterns to avoid and open decisions. | When you want the *why* behind a contract, or are weighing an SDK design call. |
 | [`archive/2026-07-16-idle-capital-hackathon-design.md`](archive/2026-07-16-idle-capital-hackathon-design.md) | Superseded predecessor. Same product, demo script, and phased build order — but a backend-based architecture we replaced. | For the **demo script & pitch narrative** (§2) and background only. Ignore its architecture (§5). |
+| [`brand/`](brand/README.md) | **Logo + palette.** The X-ray-box hero logo as SVG master + 1024px PNG, brand colors, export how-to. | When you need the logo (app icon, og-image, Loom title, README). |
 
 ## The 30-second version
 

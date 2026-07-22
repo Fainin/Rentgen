@@ -4,7 +4,12 @@
   "description": "Rentgen's reusable value chain (detect → enrich → price → total) + drop-in <rentgen-scanner> / <rentgen-results> widgets. Framework-agnostic, client-side.",
   "license": "Apache-2.0",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/**/rentgen-*.ts",
+    "./src/**/index.ts",
+    "./src/index.ts",
+    "./dist/**"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -21,10 +26,11 @@
     "src"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean",
+    "build": "tsup",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.35",
     "lit": "^3.2.1"
   },
   "devDependencies": {

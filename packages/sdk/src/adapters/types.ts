@@ -16,11 +16,19 @@ import type { Asset, DetectedObject, EnrichedItem, Session } from '../types.js';
  */
 export interface DetectionAdapter {
   detect(imageBase64: string): Promise<DetectedObject[]>;
+  /**
+   * Optional (sanctioned additive edit, 2026-07-18): analyze a whole video pan at once —
+   * all sampled keyframes in ONE model call. The model sees full-scene context, dedupes
+   * the same object across frames itself, and reports `frameIndex`/`box` per item.
+   * Default implementation: gemini-vision (the krempel pattern).
+   */
+  detectBatch?(framesBase64: readonly string[]): Promise<DetectedObject[]>;
 }
 
 /**
  * Prices one detected object against live comps → resale + rent/day + sources.
- * Default implementation: tavily-comps (Tavily search → OpenAI reconcile).
+ * Default implementation: the offline stub. A worked real-world example
+ * (Tavily search → OpenAI reconcile) is in docs/writing-an-enrichment-adapter.md.
  */
 export interface EnrichmentAdapter {
   enrich(object: DetectedObject): Promise<EnrichedItem>;
