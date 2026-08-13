@@ -1,0 +1,7 @@
+# Default owners for everything in the repo — required reviewers on protected branches.
+* @kevmtt
+
+# The stable SDK contracts deserve extra scrutiny (see docs/spec.md).
+/packages/sdk/src/types.ts @kevmtt
+/packages/sdk/src/adapters/types.ts @kevmtt
+/packages/sdk/src/events.ts @kevmtt
