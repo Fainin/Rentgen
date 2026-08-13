@@ -49,6 +49,14 @@ export interface DetectedObject {
    * frame. Absent for single-image scans.
    */
   readonly frameIndex?: number;
+  /**
+   * Optional (sanctioned additive edit, 2026-07-18): the vision model's estimate of this
+   * item's *new / retail* price — the flashy "as if you'd buy it new" number, independent of
+   * the used-resale comps. It is an ungrounded MSRP prior produced during detection; an
+   * EnrichmentAdapter MAY refine it with a grounded value from comps. Drives the retail-first
+   * card price and the retail total. Currency-tagged (EUR by default).
+   */
+  readonly estimatedRetail?: PriceRange;
 }
 
 /** A detected object priced against live comps (output of an EnrichmentAdapter). */

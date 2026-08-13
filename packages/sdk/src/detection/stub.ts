@@ -7,11 +7,11 @@ import type { DetectionAdapter } from '../adapters/types.js';
 import type { DetectedObject } from '../types.js';
 
 const CATALOG: ReadonlyArray<Omit<DetectedObject, 'id'>> = [
-  { name: 'MacBook Pro 14" M3', category: 'Computing', condition: 'used - good', confidence: 0.94 },
-  { name: 'Sony α7 III', category: 'Photography', condition: 'used - good', confidence: 0.91 },
-  { name: 'PlayStation 5 Slim', category: 'Gaming', condition: 'like new', confidence: 0.88 },
-  { name: 'Bose QuietComfort 45', category: 'Audio', condition: 'used - visible wear', confidence: 0.85 },
-  { name: 'Bosch 18V cordless drill', category: 'Tools', condition: 'used - good', confidence: 0.8 },
+  { name: 'MacBook Pro 14" M3', category: 'Computing', condition: 'used - good', confidence: 0.94, estimatedRetail: { min: 1900, max: 2300, currency: 'EUR' } },
+  { name: 'Sony α7 III', category: 'Photography', condition: 'used - good', confidence: 0.91, estimatedRetail: { min: 1700, max: 2100, currency: 'EUR' } },
+  { name: 'PlayStation 5 Slim', category: 'Gaming', condition: 'like new', confidence: 0.88, estimatedRetail: { min: 450, max: 550, currency: 'EUR' } },
+  { name: 'Bose QuietComfort 45', category: 'Audio', condition: 'used - visible wear', confidence: 0.85, estimatedRetail: { min: 300, max: 380, currency: 'EUR' } },
+  { name: 'Bosch 18V cordless drill', category: 'Tools', condition: 'used - good', confidence: 0.8, estimatedRetail: { min: 130, max: 190, currency: 'EUR' } },
 ];
 
 function seedFrom(imageBase64: string): number {

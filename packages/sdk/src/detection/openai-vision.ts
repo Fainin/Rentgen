@@ -4,9 +4,12 @@
  */
 
 import type { DetectionAdapter } from '../adapters/types.js';
-import type { BoundingBox, DetectedObject } from '../types.js';
+import type { BoundingBox, DetectedObject, PriceRange } from '../types.js';
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+/** Retail estimates are stamped in this currency (matches the enrichment default). */
+const RETAIL_CURRENCY = 'EUR';
+const MAX_RETAIL_EUR = 1_000_000;
 
 /** Fixed category list — keeps Stream 3's queries and Stream 4's grouping stable. */
 export const CATEGORIES = [
@@ -60,6 +63,8 @@ List each distinct movable object that a person could sell or rent out. For each
 
 5. "box" — the object's bounding box within the image as FRACTIONS of image width/height (0..1, top-left origin): x, y = top-left corner, w, h = size. Be reasonably tight around the object. If you cannot localize it, use the full image {x:0, y:0, w:1, h:1}.
 
+6. "estimatedRetail" — the approximate price to buy this item NEW at retail today, in EUR, as { "min", "max" } (a sensible range, NOT the used price). Use your knowledge of the product's typical new/MSRP price; if the exact model is unknown, give your best estimate for that product class. Always return a positive range.
+
 Skip rules — do NOT list:
 - built-in fixtures, walls, floors, ceilings, cables or chargers as standalone items, or people;
 - everyday low-value clutter with no real resale market: bottles, cups, mugs, glasses, dishes, cutlery, food and drinks, plants, decoration knick-knacks, pens, pencils, rulers, paper notebooks, office stationery;
@@ -97,8 +102,17 @@ const JSON_SCHEMA = {
               required: ['x', 'y', 'w', 'h'],
               additionalProperties: false,
             },
+            estimatedRetail: {
+              type: 'object',
+              properties: {
+                min: { type: 'number' },
+                max: { type: 'number' },
+              },
+              required: ['min', 'max'],
+              additionalProperties: false,
+            },
           },
-          required: ['name', 'category', 'condition', 'confidence', 'box'],
+          required: ['name', 'category', 'condition', 'confidence', 'box', 'estimatedRetail'],
           additionalProperties: false,
         },
       },
@@ -137,6 +151,21 @@ interface RawItem {
   readonly condition?: unknown;
   readonly confidence?: unknown;
   readonly box?: unknown;
+  readonly estimatedRetail?: unknown;
+}
+
+/** Parse the model's new/retail estimate into a positive, currency-tagged EUR range. */
+function validateRetail(raw: unknown): PriceRange | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined;
+  const r = raw as { min?: unknown; max?: unknown };
+  let lo = Number(r.min);
+  let hi = Number(r.max);
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return undefined;
+  if (lo > hi) [lo, hi] = [hi, lo];
+  lo = Math.min(MAX_RETAIL_EUR, Math.max(1, Math.round(lo)));
+  hi = Math.min(MAX_RETAIL_EUR, Math.max(lo, Math.round(hi)));
+  if (!(lo > 0 && lo <= hi)) return undefined;
+  return { min: lo, max: hi, currency: RETAIL_CURRENCY };
 }
 
 /**
@@ -194,7 +223,16 @@ function validateItem(
   }
 
   const box = validateBox(raw.box);
-  return { id: `oa-${index}`, name, category, condition, confidence, ...(box ? { box } : {}) };
+  const estimatedRetail = validateRetail(raw.estimatedRetail);
+  return {
+    id: `oa-${index}`,
+    name,
+    category,
+    condition,
+    confidence,
+    ...(box ? { box } : {}),
+    ...(estimatedRetail ? { estimatedRetail } : {}),
+  };
 }
 
 function parseResponseContent(content: string, minConfidence: number): DetectedObject[] {

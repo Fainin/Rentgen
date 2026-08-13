@@ -10,7 +10,7 @@
  */
 
 import type { DetectionAdapter } from '../adapters/types.js';
-import type { BoundingBox, DetectedObject } from '../types.js';
+import type { BoundingBox, DetectedObject, PriceRange } from '../types.js';
 import { CATEGORIES } from './openai-vision.js';
 
 const GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -29,6 +29,9 @@ const NAME_MAX_LEN = 80;
 const CONDITION_MAX_LEN = 60;
 const REQUEST_TIMEOUT_MS = 60_000;
 const TEMPERATURE = 0.2;
+/** Retail estimates are stamped in this currency (matches the enrichment default). */
+const RETAIL_CURRENCY = 'EUR';
+const MAX_RETAIL_EUR = 1_000_000;
 
 const CATEGORY_SET: ReadonlySet<string> = new Set(CATEGORIES);
 
@@ -43,6 +46,7 @@ For each item provide:
 4. "confidence" — 0..1: how certain you are the NAME is correct. Unreadable brand → generic name + honestly lower confidence.
 5. "bestFrameIndex" — 0-based index of the frame with the clearest view of this object.
 6. "box" — bounding box of the object IN THAT BEST FRAME as fractions 0..1 (x, y = top-left, w, h = size). Reasonably tight.
+7. "estimatedRetail" — the approximate price to buy this item NEW at retail today, in EUR, as { "min", "max" } (a sensible range, not the used price). Use your knowledge of the product's typical new/MSRP price; if the exact model is unknown, give your best estimate for that product class. Always provide a positive range.
 
 Skip: built-in fixtures, walls/floors, cables/chargers as standalone items, people; low-value clutter (bottles, cups, dishes, food, plants, deco knick-knacks, pens, paper notebooks, stationery); anything clearly under ~€15 used resale value.
 
@@ -65,6 +69,13 @@ const RESPONSE_SCHEMA = {
           y: { type: 'NUMBER' },
           w: { type: 'NUMBER' },
           h: { type: 'NUMBER' },
+        },
+      },
+      estimatedRetail: {
+        type: 'OBJECT',
+        properties: {
+          min: { type: 'NUMBER' },
+          max: { type: 'NUMBER' },
         },
       },
     },
@@ -118,6 +129,20 @@ function validateBox(raw: unknown): BoundingBox | undefined {
   return { x, y, w: Math.min(w, 1 - x), h: Math.min(h, 1 - y) };
 }
 
+/** Parse the model's new/retail estimate into a positive, currency-tagged EUR range. */
+function validateRetail(raw: unknown): PriceRange | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined;
+  const r = raw as { min?: unknown; max?: unknown };
+  let lo = Number(r.min);
+  let hi = Number(r.max);
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return undefined;
+  if (lo > hi) [lo, hi] = [hi, lo];
+  lo = Math.min(MAX_RETAIL_EUR, Math.max(1, Math.round(lo)));
+  hi = Math.min(MAX_RETAIL_EUR, Math.max(lo, Math.round(hi)));
+  if (!(lo > 0 && lo <= hi)) return undefined;
+  return { min: lo, max: hi, currency: RETAIL_CURRENCY };
+}
+
 interface RawItem {
   readonly name?: unknown;
   readonly category?: unknown;
@@ -125,6 +150,7 @@ interface RawItem {
   readonly confidence?: unknown;
   readonly bestFrameIndex?: unknown;
   readonly box?: unknown;
+  readonly estimatedRetail?: unknown;
 }
 
 function validateItem(
@@ -151,6 +177,7 @@ function validateItem(
   const frameIndex =
     Number.isFinite(rawFrame) && rawFrame >= 0 && rawFrame < frameCount ? rawFrame : 0;
   const box = validateBox(raw.box);
+  const estimatedRetail = validateRetail(raw.estimatedRetail);
 
   return {
     id: `gm-${index}`,
@@ -160,6 +187,7 @@ function validateItem(
     confidence,
     frameIndex,
     ...(box ? { box } : {}),
+    ...(estimatedRetail ? { estimatedRetail } : {}),
   };
 }
 

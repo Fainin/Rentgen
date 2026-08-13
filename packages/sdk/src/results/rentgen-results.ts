@@ -12,7 +12,7 @@ import type { EnrichedItem, ScanResult } from '../types.js';
 import { emit, on } from '../events.js';
 import { formatMoney, formatRange } from './format.js';
 import { monthlyPassiveIncome } from './earnings.js';
-import { midpoint, totalIdleValue } from './total.js';
+import { midpoint, totalIdleValue, totalRetailValue } from './total.js';
 
 // A leftward drag past this fraction of the card width commits the delete.
 const SWIPE_DELETE_RATIO = 0.4;
@@ -193,15 +193,23 @@ export class RentgenResults extends LitElement {
       flex: none;
       text-align: right;
     }
+    .retail {
+      color: #fff;
+      font-weight: 800;
+      font-size: 1.2rem;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
     .rent {
       color: var(--rentgen-accent, #86efac);
-      font-weight: 800;
-      font-size: 1.02rem;
+      font-weight: 700;
+      font-size: 0.85rem;
       white-space: nowrap;
+      margin-top: 0.1rem;
     }
     .resale {
       color: #9ca3af;
-      font-size: 0.8rem;
+      font-size: 0.72rem;
       white-space: nowrap;
     }
     .empty,
@@ -277,7 +285,8 @@ export class RentgenResults extends LitElement {
         this.result = result;
         this.selected = new Set(result.items.map((i) => i.id));
         this.removed = new Set();
-        this.animateTotal(result.totalIdleValue);
+        // Hero star = retail "value in your home"; the resale total is shown as a sub-line.
+        this.animateTotal(totalRetailValue(result.items));
         this.emitSelection();
       }),
       on('scan:error', ({ message }) => {
@@ -331,7 +340,7 @@ export class RentgenResults extends LitElement {
     if (next.has(id)) next.delete(id);
     else next.add(id);
     this.selected = next;
-    this.animateTotal(totalIdleValue(this.activeItems));
+    this.animateTotal(totalRetailValue(this.activeItems));
     this.emitSelection();
   }
 
@@ -345,7 +354,7 @@ export class RentgenResults extends LitElement {
     nextSelected.delete(id);
     this.selected = nextSelected;
 
-    this.animateTotal(totalIdleValue(this.activeItems));
+    this.animateTotal(totalRetailValue(this.activeItems));
     this.emitSelection();
   }
 
@@ -460,19 +469,21 @@ export class RentgenResults extends LitElement {
     if (count === 0) {
       return html`<div class="empty">Everything cleared — scan more to find idle value.</div>`;
     }
-    // Total and monthly reflect only the active items, so toggling updates the sum.
+    // Totals and monthly reflect only the active items, so toggling updates them.
     const monthly = monthlyPassiveIncome(this.activeItems);
+    const resaleTotal = totalIdleValue(this.activeItems);
     return html`
       <h2 class="heading">${count} ${count === 1 ? 'item' : 'items'} found</h2>
       <p class="subheading">Tap to toggle · swipe a card left to remove it</p>
       <div class="hero">
         <div class="label">
-          <span>Sitting idle, earning €0</span>
-          <span class="badge">Renting</span>
+          <span>Value sitting idle in your home</span>
+          <span class="badge">Buy · Rent · Sell</span>
         </div>
         <div class="amount">${formatMoney(this.displayTotal, result.currency)}</div>
         <div class="sub">
-          ~${formatMoney(monthly, result.currency)}/month passive if you rent it out
+          ~${formatMoney(resaleTotal, result.currency)} if you sell it all now ·
+          ~${formatMoney(monthly, result.currency)}/month if you rent it out
         </div>
       </div>
       ${items.map((item) => {
@@ -511,6 +522,11 @@ export class RentgenResults extends LitElement {
                 </div>
               </div>
               <div class="prices">
+                <div class="retail">
+                  ${item.estimatedRetail
+                    ? formatMoney(midpoint(item.estimatedRetail), item.estimatedRetail.currency)
+                    : formatMoney(midpoint(item.resale), item.resale.currency)}
+                </div>
                 <div class="rent">
                   ${formatRange(item.rentPerDay.min, item.rentPerDay.max, item.rentPerDay.currency)}/day
                 </div>
