@@ -2,7 +2,7 @@
 
 <img src="docs/brand/rentgen-xray-box-1024.png" width="96" align="right" alt="Rentgen logo — X-rayed box revealing a green €">
 
-> **Point your phone at your stuff → an agent identifies each item, prices its resale + rent/day against live web comps → an idle-capital total adds up.**
+> **Point your phone at your stuff → an agent identifies each item, prices its resale + rent/day → an idle-capital total adds up.**
 > Ends on: *"You're sitting on €4,200 doing nothing."* 🎤
 
 **Rentgen** reads as German *Röntgen* (X-ray — sees through your stuff) and as "rent-gen". Built for the {Tech: Europe} × Almedia Hackathon, Berlin.
@@ -14,6 +14,7 @@ SDK-first, fully client-side, **zero backend**. The value chain ships as a reusa
 > listing-export bundle. Runs fully offline on stub adapters (`?stub=1`) or with live
 > detection keys. Pricing ships stub-only — a full real-world enrichment adapter is
 > documented in `docs/writing-an-enrichment-adapter.md`.
+> No automated tests — a deliberate hackathon scope cut; we smoke-test on real objects.
 
 ## Quickstart
 
@@ -35,16 +36,20 @@ cp apps/app/.env.example apps/app/.env   # then fill in the keys
 ```
 
 ```
-VITE_OPENAI_API_KEY=sk-…
+VITE_GEMINI_API_KEY=…   # live-pan frame-batch detection (default scanner path)
+VITE_OPENAI_API_KEY=…   # single-photo detection
 ```
 
-Keys are demo-scoped and **rotated after the event** — never commit `.env`.
+Keys are demo-scoped and **rotated after the event** — never commit `.env`. Note the
+keys end up in the browser bundle — a deliberate demo trade-off; put the adapters
+behind a thin server before shipping this for real.
 
 ## Layout
 
 ```
 packages/sdk/   @rentgen/sdk — value chain + <rentgen-scanner>/<rentgen-results> widgets
 apps/app/       thin React (Vite) launcher
+apps/website/   marketing/landing page (React + Vite)
 docs/           the team's 2nd brain — start at docs/README.md
 CLAUDE.md       instructions for Claude Code working in this repo
 ```

@@ -1,8 +1,8 @@
 const SNIPPET = `import { configureRentgen } from '@rentgen/sdk';
 
 configureRentgen({
+  geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY,
   openaiApiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  tavilyApiKey: import.meta.env.VITE_TAVILY_API_KEY,
 });
 
 // mount anywhere — React, Angular, or plain HTML
